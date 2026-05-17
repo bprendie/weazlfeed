@@ -12,8 +12,9 @@ func (m Model) View() string {
 	if m.width == 0 {
 		return "weazlfeed"
 	}
-	header := m.styles.header.Render(logo)
-	bodyHeight := max(8, m.height-lipgloss.Height(header)-5)
+	contentWidth := max(40, m.width-4)
+	header := "\n" + renderLogo(logo, contentWidth)
+	bodyHeight := max(8, m.height-lipgloss.Height(header)-6)
 	leftW := max(24, m.width/5)
 	centerW := max(34, m.width/3)
 	rightW := max(30, m.width-leftW-centerW-10)

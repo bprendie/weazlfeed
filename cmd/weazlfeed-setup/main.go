@@ -27,8 +27,20 @@ func run() error {
 	if providerType == "ollama" {
 		defaultURL = "http://localhost:11434"
 	}
-	serverURL := askString(reader, "Base URL", defaultURL)
-	model := askString(reader, "Model name", defaultModel(providerType))
+	fmt.Println(urlHelp(providerType))
+	serverURL := normalizeServerURL(providerType, askString(reader, "Base URL", defaultURL))
+	fmt.Printf("Using base URL: %s\n", serverURL)
+	models, err := fetchModels(providerType, serverURL)
+	var model string
+	if err != nil {
+		fmt.Printf("Could not query models: %v\n", err)
+		model = askString(reader, "Model name", defaultModel(providerType))
+	} else if len(models) == 0 {
+		fmt.Println("Provider returned no models.")
+		model = askString(reader, "Model name", defaultModel(providerType))
+	} else {
+		model = askModel(reader, models)
+	}
 	cfg = writeProvider(cfg, providerType, serverURL, model, askContextWindow(reader))
 	if askChoice(reader, "Add a starter feed", []string{"no", "yes"}, "no") == "yes" {
 		title := askString(reader, "Feed title", "")
@@ -55,7 +67,7 @@ func writeProvider(cfg config.Config, providerType, serverURL, model string, con
 	cfg.ActiveProvider = id
 	cfg.Providers[id] = config.Provider{
 		Type:          providerType,
-		ServerURL:     normalizeServerURL(serverURL),
+		ServerURL:     normalizeServerURL(providerType, serverURL),
 		Model:         model,
 		ContextWindow: contextWindow,
 	}
