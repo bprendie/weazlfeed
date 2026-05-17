@@ -35,6 +35,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.article = msg.text
 			m.status = "local extraction complete"
 		}
+	case articleMsg:
+		m.err = errText(msg.err)
+		if msg.err == nil {
+			m.article = msg.text
+			m.status = "gopher target loaded"
+		}
 	case meterMsg:
 		sample := audio.Sample(msg)
 		m.bars = sample.Bands

@@ -40,12 +40,25 @@ func (m Model) renderFeeds(width, height int) string {
 		return m.styles.help.Render("No feeds yet. Add feeds in config, then run setup or refresh.")
 	}
 	var lines []string
+	currentCategory := ""
 	for i, feed := range m.feeds {
-		line := truncate(fmt.Sprintf("%s [%d]", feed.Title, feed.Unread), width-4)
+		category := strings.ToUpper(firstText(feed.Category, "GENERAL"))
+		if category != currentCategory {
+			if len(lines) > 0 {
+				lines = append(lines, "")
+			}
+			lines = append(lines, m.styles.help.Render(":: "+category+" ::"))
+			currentCategory = category
+		}
+		prefix := "  "
+		if feed.Type == "gopher" {
+			prefix = "g>"
+		}
+		line := truncate(fmt.Sprintf("%s %s [%d]", prefix, feed.Title, feed.Unread), width-4)
 		if i == m.feedCursor {
-			line = m.styles.selected.Render("> " + line)
+			line = m.styles.selected.Render("=> " + strings.TrimSpace(line))
 		} else {
-			line = m.styles.item.Render("  " + line)
+			line = m.styles.item.Render("   " + line)
 		}
 		lines = append(lines, line)
 	}
@@ -57,13 +70,14 @@ func (m Model) renderItems(width, height int) string {
 		return m.styles.help.Render("No items loaded.")
 	}
 	var lines []string
+	lines = append(lines, m.styles.help.Render("last signal / newest first"))
 	for i, item := range m.items {
 		badges := badges(item)
 		line := truncate(badges+" "+item.Title, width-4)
 		if i == m.itemCursor {
-			line = m.styles.selected.Render("> " + line)
+			line = m.styles.selected.Render("=> " + line)
 		} else {
-			line = m.styles.item.Render("  " + line)
+			line = m.styles.item.Render(" - " + line)
 		}
 		lines = append(lines, line)
 	}
@@ -91,7 +105,7 @@ func (m Model) footer() string {
 		audioState = "audio live"
 	}
 	parts := []string{
-		m.styles.help.Render("j/k nav tab focus enter read/play space pause s stop r refresh h sludge q quit"),
+		m.styles.help.Render("[j/k] nav  [tab] node  [enter] read/dial/play  [space] pause  [s] stop  [r] refresh  [h] sludge  [q] quit"),
 		m.styles.status.Render(ai + " | " + audioState),
 		m.visualizer(),
 	}
@@ -136,6 +150,9 @@ func badges(item store.Item) string {
 	}
 	if item.SludgeFlag {
 		parts = append(parts, "[SLUDGE]")
+	}
+	if strings.HasPrefix(strings.ToLower(item.Link), "gopher://") {
+		parts = append(parts, "[GOPHER]")
 	}
 	return strings.Join(parts, " ")
 }

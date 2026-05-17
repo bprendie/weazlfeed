@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS feeds (
 	title TEXT NOT NULL,
 	url TEXT NOT NULL UNIQUE,
 	type TEXT NOT NULL DEFAULT 'rss',
+	category TEXT NOT NULL DEFAULT 'GENERAL',
 	last_fetched TEXT
 );
 
@@ -36,4 +37,5 @@ CREATE INDEX IF NOT EXISTS idx_items_feed_date ON items(feed_id, published_at DE
 CREATE INDEX IF NOT EXISTS idx_items_unread ON items(read_status);
 
 ALTER TABLE items ADD COLUMN playhead_seconds INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE feeds ADD COLUMN category TEXT NOT NULL DEFAULT 'GENERAL';
 `

@@ -28,3 +28,8 @@ type aiMsg struct {
 type meterMsg audio.Sample
 
 type playheadTickMsg struct{}
+
+type articleMsg struct {
+	text string
+	err  error
+}

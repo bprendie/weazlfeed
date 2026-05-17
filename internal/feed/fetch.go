@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -17,6 +18,9 @@ func NewClient() Client {
 }
 
 func (c Client) Fetch(ctx context.Context, url string) (Feed, error) {
+	if IsGopher(url) {
+		return FetchGopher(ctx, url)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return Feed{}, err
@@ -35,4 +39,8 @@ func (c Client) Fetch(ctx context.Context, url string) (Feed, error) {
 		return Feed{}, err
 	}
 	return Parse(body)
+}
+
+func IsGopher(raw string) bool {
+	return strings.HasPrefix(strings.ToLower(raw), "gopher://")
 }

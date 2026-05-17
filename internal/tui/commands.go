@@ -22,7 +22,11 @@ func seedFeedsCmd(vault *store.Store, seeds []config.SeedFeed) tea.Cmd {
 			if title == "" {
 				title = seed.URL
 			}
-			if _, err := vault.UpsertFeed(title, seed.URL, "rss"); err != nil {
+			feedType := "rss"
+			if feed.IsGopher(seed.URL) {
+				feedType = "gopher"
+			}
+			if _, err := vault.UpsertFeed(title, seed.URL, feedType, seed.Category); err != nil {
 				return feedsMsg{err: err}
 			}
 		}
@@ -66,7 +70,7 @@ func refreshCmd(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Cmd {
 				return fetchMsg{added: added, err: err}
 			}
 			title := firstText(parsed.Title, src.Title, src.URL)
-			feedID, err := vault.UpsertFeed(title, src.URL, parsed.Type)
+			feedID, err := vault.UpsertFeed(title, src.URL, parsed.Type, src.Category)
 			if err != nil {
 				return fetchMsg{added: added, err: err}
 			}
@@ -115,6 +119,25 @@ func aiCmd(ai llm.Client, mode string, item store.Item, question string) tea.Cmd
 			text, err = ai.Triage(ctx, item.ContentMarkdown)
 		}
 		return aiMsg{text: text, err: err}
+	}
+}
+
+func gopherArticleCmd(url string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		parsed, err := feed.FetchGopher(ctx, url)
+		if err != nil {
+			return articleMsg{err: err}
+		}
+		if len(parsed.Items) == 1 && parsed.Items[0].Link == url {
+			return articleMsg{text: parsed.Items[0].ContentMarkdown}
+		}
+		text := "# " + parsed.Title + "\n\n"
+		for _, item := range parsed.Items {
+			text += "- " + item.Title + "\n  " + item.Link + "\n"
+		}
+		return articleMsg{text: text}
 	}
 }
 

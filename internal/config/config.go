@@ -35,8 +35,9 @@ type UI struct {
 }
 
 type SeedFeed struct {
-	Title string `json:"title"`
-	URL   string `json:"url"`
+	Category string `json:"category,omitempty"`
+	Title    string `json:"title"`
+	URL      string `json:"url"`
 }
 
 func Load() (Config, string, error) {
@@ -99,6 +100,7 @@ func Default() Config {
 		},
 		Database: Database{Path: filepath.Join(dataDir, "weazlfeed.sqlite3")},
 		UI:       UI{MarkdownStyle: "dark"},
+		Feeds:    DefaultFeeds(),
 	}
 }
 
@@ -128,6 +130,9 @@ func (c *Config) withDefaults() {
 	}
 	if c.UI.MarkdownStyle == "" {
 		c.UI.MarkdownStyle = def.UI.MarkdownStyle
+	}
+	if c.Feeds == nil {
+		c.Feeds = def.Feeds
 	}
 }
 

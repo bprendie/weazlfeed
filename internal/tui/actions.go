@@ -34,6 +34,10 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	}
 	item := m.items[m.itemCursor]
 	_ = m.store.MarkRead(item.ID)
+	if strings.HasPrefix(strings.ToLower(item.Link), "gopher://") {
+		m.status = "dialing gopher target"
+		return m, gopherArticleCmd(item.Link)
+	}
 	if item.EnclosureURL != "" && strings.HasPrefix(item.EnclosureType, "audio/") {
 		m.stopAudio()
 		if err := m.player.Play(item.EnclosureURL, item.PlayheadSeconds); err != nil {
