@@ -14,7 +14,7 @@ func (m Model) View() string {
 	}
 	dims, bodyHeight := m.layout()
 	contentWidth := max(20, m.width-4)
-	header := "\n" + renderLogo(logo, contentWidth)
+	header := renderLogo(logo, contentWidth)
 	body := lipgloss.JoinHorizontal(lipgloss.Top,
 		m.panel("INDEX", m.renderFeeds(dims.left, bodyHeight), dims.left, bodyHeight, m.focus == focusFeeds),
 		m.panel("STREAM", m.renderItems(dims.center, bodyHeight), dims.center, bodyHeight, m.focus == focusItems),
@@ -29,7 +29,9 @@ func (m Model) panel(title, body string, width, height int, active bool) string 
 	if active {
 		style = style.BorderForeground(crushPink)
 	}
-	return style.Render(m.styles.status.Render(title) + "\n" + body)
+	lines := strings.Split(body, "\n")
+	contentHeight := max(1, height-3)
+	return style.Render(m.styles.status.Render(title) + "\n" + fitLines(lines, contentHeight))
 }
 
 func (m Model) renderFeeds(width, height int) string {
@@ -41,9 +43,6 @@ func (m Model) renderFeeds(width, height int) string {
 		category := strings.ToUpper(firstText(feed.Category, "GENERAL"))
 		currentCategory := previousCategory(m.feeds, m.feedScroll+i)
 		if category != currentCategory {
-			if len(lines) > 0 {
-				lines = append(lines, "")
-			}
 			lines = append(lines, m.styles.help.Render(":: "+category+" ::"))
 			currentCategory = category
 		}
@@ -60,7 +59,7 @@ func (m Model) renderFeeds(width, height int) string {
 		}
 		lines = append(lines, line)
 	}
-	return fitLines(lines, height-2)
+	return fitLines(lines, height-3)
 }
 
 func (m Model) renderItems(width, height int) string {
@@ -80,7 +79,7 @@ func (m Model) renderItems(width, height int) string {
 		}
 		lines = append(lines, line)
 	}
-	return fitLines(lines, height-2)
+	return fitLines(lines, height-3)
 }
 
 func (m Model) renderStage(width, height int) string {
@@ -88,11 +87,11 @@ func (m Model) renderStage(width, height int) string {
 		return m.input.View()
 	}
 	lines := strings.Split(m.article, "\n")
-	lines = windowLines(lines, m.stageScroll, height-2)
+	lines = windowLines(lines, m.stageScroll, height-3)
 	for i := range lines {
 		lines[i] = truncate(lines[i], width-2)
 	}
-	return fitLines(lines, height-2)
+	return fitLines(lines, height-3)
 }
 
 func (m Model) footer() string {
@@ -105,9 +104,8 @@ func (m Model) footer() string {
 		audioState = "audio live"
 	}
 	parts := []string{
-		m.styles.help.Render("[j/k] nav  [tab] node  [enter] read/dial/play  [space] pause  [s] stop  [r] refresh  [h] sludge  [q] quit"),
-		m.styles.status.Render(ai + " | " + audioState),
-		m.visualizer(),
+		m.styles.help.Render("[j/k] nav  [pg] scroll  [tab] node  [enter] read/dial/play  [space] pause  [s] stop  [r] refresh  [q] quit"),
+		m.styles.status.Render(ai + " | " + audioState + compactVisualizer(m.visualizer())),
 	}
 	if m.err != "" {
 		parts = append(parts, m.styles.error.Render(m.err))
@@ -175,13 +173,20 @@ type paneDims struct {
 
 func (m Model) layout() (paneDims, int) {
 	contentWidth := max(40, m.width-4)
-	headerHeight := lipgloss.Height("\n" + renderLogo(logo, contentWidth))
-	bodyHeight := clampInt(m.height-headerHeight-7, 6, max(6, m.height-4))
+	headerHeight := lipgloss.Height(renderLogo(logo, contentWidth))
+	bodyHeight := clampInt(m.height-headerHeight-5, 6, max(6, m.height-3))
 	innerWidth := max(40, m.width-8)
 	left := clampInt(innerWidth/5, 18, 28)
 	center := clampInt(innerWidth/3, 28, 44)
 	right := max(24, innerWidth-left-center)
 	return paneDims{left: left, center: center, right: right}, bodyHeight
+}
+
+func compactVisualizer(value string) string {
+	if value == "" {
+		return ""
+	}
+	return " | " + value
 }
 
 func (m Model) visibleFeeds() []store.Feed {

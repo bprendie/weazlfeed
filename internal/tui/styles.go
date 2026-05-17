@@ -27,13 +27,14 @@ type styles struct {
 
 func newStyles() styles {
 	return styles{
-		frame:  lipgloss.NewStyle().Foreground(ink).Background(lipgloss.Color("#0D0D12")).Padding(1, 2),
+		frame:  lipgloss.NewStyle().Foreground(ink).Background(lipgloss.Color("#0D0D12")).Padding(0, 2),
 		header: lipgloss.NewStyle().Foreground(crushPink).Bold(true),
 		panel: lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder()).
 			BorderForeground(border).
 			Background(panel).
-			Padding(0, 1),
+			Padding(0, 1).
+			Margin(0),
 		status:   lipgloss.NewStyle().Foreground(crushMint).Bold(true),
 		help:     lipgloss.NewStyle().Foreground(muted),
 		selected: lipgloss.NewStyle().Foreground(crushPink).Bold(true),
