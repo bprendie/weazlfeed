@@ -16,6 +16,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 	case tea.KeyMsg:
 		return m.updateKey(msg)
+	case tea.MouseMsg:
+		m.updateMouse(msg)
 	case feedsMsg:
 		m.feeds, m.err = msg.feeds, errText(msg.err)
 		if len(m.feeds) > 0 {
@@ -39,6 +41,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = errText(msg.err)
 		if msg.err == nil {
 			m.article = msg.text
+			m.stageScroll = 0
 			m.status = "gopher target loaded"
 		}
 	case meterMsg:
@@ -67,6 +70,14 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.move(1)
 	case "k", "up":
 		m.move(-1)
+	case "pgdown":
+		m.page(1)
+	case "pgup":
+		m.page(-1)
+	case "home":
+		m.home()
+	case "end":
+		m.end()
 	case "r":
 		m.status = "refreshing feeds"
 		return m, refreshCmd(m.store, m.feeds, m.ai)

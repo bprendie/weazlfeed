@@ -21,31 +21,34 @@ const (
 )
 
 type Model struct {
-	cfg        config.Config
-	cfgPath    string
-	store      *store.Store
-	styles     styles
-	renderer   *glamour.TermRenderer
-	ai         llm.Client
-	player     audio.Player
-	meter      *audio.Meter
-	input      textinput.Model
-	focus      focus
-	width      int
-	height     int
-	feeds      []store.Feed
-	items      []store.Item
-	feedCursor int
-	itemCursor int
-	article    string
-	status     string
-	err        string
-	hideSludge bool
-	aiEnabled  bool
-	asking     bool
-	paused     bool
-	bars       []float64
-	playingID  int64
+	cfg         config.Config
+	cfgPath     string
+	store       *store.Store
+	styles      styles
+	renderer    *glamour.TermRenderer
+	ai          llm.Client
+	player      audio.Player
+	meter       *audio.Meter
+	input       textinput.Model
+	focus       focus
+	width       int
+	height      int
+	feeds       []store.Feed
+	items       []store.Item
+	feedCursor  int
+	itemCursor  int
+	feedScroll  int
+	itemScroll  int
+	stageScroll int
+	article     string
+	status      string
+	err         string
+	hideSludge  bool
+	aiEnabled   bool
+	asking      bool
+	paused      bool
+	bars        []float64
+	playingID   int64
 }
 
 func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
