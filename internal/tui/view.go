@@ -13,30 +13,39 @@ func (m Model) View() string {
 		return "weazlfeed"
 	}
 	dims, bodyHeight := m.layout()
-	contentWidth := max(20, m.width-4)
-	header := renderLogo(logo, contentWidth)
+	contentWidth := max(20, m.width)
+	header := m.header(contentWidth)
 	body := lipgloss.JoinHorizontal(lipgloss.Top,
 		m.panel("INDEX", m.renderFeeds(dims.left, bodyHeight), dims.left, bodyHeight, m.focus == focusFeeds),
 		m.panel("STREAM", m.renderItems(dims.center, bodyHeight), dims.center, bodyHeight, m.focus == focusItems),
 		m.panel("STAGE", m.renderStage(dims.right, bodyHeight), dims.right, bodyHeight, m.focus == focusArticle),
 	)
 	footer := m.footer()
-	return m.styles.frame.Width(m.width).Height(m.height).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
+	return m.styles.frame.Width(m.width).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
 }
 
 func (m Model) panel(title, body string, width, height int, active bool) string {
-	style := m.styles.panel.Width(width).Height(height)
+	style := m.styles.panel.Width(panelContentWidth(m.styles.panel, width))
 	if active {
 		style = style.BorderForeground(crushPink)
 	}
 	lines := strings.Split(body, "\n")
 	contentHeight := max(1, height-3)
-	return style.Render(m.styles.status.Render(title) + "\n" + fitLines(lines, contentHeight))
+	content := exactLines(append([]string{m.styles.status.Render(title)}, lines...), contentHeight+1)
+	return style.Render(strings.Join(content, "\n"))
+}
+
+func (m Model) header(width int) string {
+	if m.height < 30 {
+		return m.styles.header.Render("////// WeazlFeed //////")
+	}
+	return renderLogo(logo, width)
 }
 
 func (m Model) renderFeeds(width, height int) string {
+	width = panelContentWidth(m.styles.panel, width)
 	if len(m.feeds) == 0 {
-		return m.styles.help.Render("No feeds yet. Add feeds in config, then run setup or refresh.")
+		return m.styles.help.Render(truncate("No feeds yet. Add feeds in config, then run setup or refresh.", width))
 	}
 	var lines []string
 	for i, feed := range m.visibleFeeds() {
@@ -50,12 +59,14 @@ func (m Model) renderFeeds(width, height int) string {
 		if feed.Type == "gopher" {
 			prefix = "g>"
 		}
-		line := truncate(fmt.Sprintf("%s %s [%d]", prefix, feed.Title, feed.Unread), width-4)
 		feedIndex := m.feedScroll + i
+		var line string
 		if feedIndex == m.feedCursor {
-			line = m.styles.selected.Render("=> " + strings.TrimSpace(line))
+			line = truncate("=> "+prefix+" "+feed.Title+" ["+intText(feed.Unread)+"]", width)
+			line = m.styles.selected.Render(line)
 		} else {
-			line = m.styles.item.Render("   " + line)
+			line = truncate(" - "+prefix+" "+feed.Title+" ["+intText(feed.Unread)+"]", width)
+			line = m.styles.item.Render(line)
 		}
 		lines = append(lines, line)
 	}
@@ -63,19 +74,22 @@ func (m Model) renderFeeds(width, height int) string {
 }
 
 func (m Model) renderItems(width, height int) string {
+	width = panelContentWidth(m.styles.panel, width)
 	if len(m.items) == 0 {
-		return m.styles.help.Render("No items loaded.")
+		return m.styles.help.Render(truncate("No items loaded.", width))
 	}
 	var lines []string
 	lines = append(lines, m.styles.help.Render("last signal / newest first"))
 	for i, item := range m.visibleItems() {
 		badges := badges(item)
-		line := truncate(badges+" "+item.Title, width-4)
 		itemIndex := m.itemScroll + i
+		var line string
 		if itemIndex == m.itemCursor {
-			line = m.styles.selected.Render("=> " + line)
+			line = truncate("=> "+badges+" "+item.Title, width)
+			line = m.styles.selected.Render(line)
 		} else {
-			line = m.styles.item.Render(" - " + line)
+			line = truncate(" - "+badges+" "+item.Title, width)
+			line = m.styles.item.Render(line)
 		}
 		lines = append(lines, line)
 	}
@@ -83,8 +97,9 @@ func (m Model) renderItems(width, height int) string {
 }
 
 func (m Model) renderStage(width, height int) string {
+	width = panelContentWidth(m.styles.panel, width)
 	if m.asking {
-		return m.input.View()
+		return truncate(m.input.View(), width)
 	}
 	lines := strings.Split(m.article, "\n")
 	lines = windowLines(lines, m.stageScroll, height-3)
@@ -104,7 +119,7 @@ func (m Model) footer() string {
 		audioState = "audio live"
 	}
 	parts := []string{
-		m.styles.help.Render("[j/k] nav  [pg] scroll  [tab] node  [enter] read/dial/play  [space] pause  [s] stop  [r] refresh  [q] quit"),
+		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [tab] node [enter] read/dial/play [space] pause [s] stop [r] refresh [q] quit", max(10, m.width))),
 		m.styles.status.Render(ai + " | " + audioState + compactVisualizer(m.visualizer())),
 	}
 	if m.err != "" {
@@ -165,6 +180,19 @@ func fitLines(lines []string, height int) string {
 	return strings.Join(lines, "\n")
 }
 
+func exactLines(lines []string, height int) []string {
+	if height < 1 {
+		return nil
+	}
+	if len(lines) > height {
+		return lines[:height]
+	}
+	for len(lines) < height {
+		lines = append(lines, "")
+	}
+	return lines
+}
+
 type paneDims struct {
 	left   int
 	center int
@@ -172,14 +200,30 @@ type paneDims struct {
 }
 
 func (m Model) layout() (paneDims, int) {
-	contentWidth := max(40, m.width-4)
-	headerHeight := lipgloss.Height(renderLogo(logo, contentWidth))
-	bodyHeight := clampInt(m.height-headerHeight-5, 6, max(6, m.height-3))
-	innerWidth := max(40, m.width-8)
-	left := clampInt(innerWidth/5, 18, 28)
-	center := clampInt(innerWidth/3, 28, 44)
-	right := max(24, innerWidth-left-center)
+	contentWidth := max(40, m.width)
+	headerHeight := lipgloss.Height(m.header(contentWidth))
+	footerHeight := 3
+	bodyHeight := clampInt(m.height-headerHeight-footerHeight-2, 5, max(5, m.height-2))
+	left, center, right := m.layoutWidths(max(30, m.width))
 	return paneDims{left: left, center: center, right: right}, bodyHeight
+}
+
+func (m Model) layoutWidths(total int) (left, center, right int) {
+	compact := clampInt(total/5, 12, 22)
+	focused := max(12, total-(compact*2))
+	switch m.focus {
+	case focusFeeds:
+		left, center, right = focused, compact, total-focused-compact
+	case focusItems:
+		center, left, right = focused, compact, total-focused-compact
+	default:
+		right, left, center = focused, compact, total-focused-compact
+	}
+	return max(8, left), max(8, center), max(8, right)
+}
+
+func panelContentWidth(style lipgloss.Style, outerW int) int {
+	return max(1, outerW-style.GetHorizontalFrameSize())
 }
 
 func compactVisualizer(value string) string {
