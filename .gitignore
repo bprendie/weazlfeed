@@ -1,0 +1,6 @@
+.gocache/
+.gomodcache/
+weazlfeed
+*.sqlite3
+*.db
+dist/
