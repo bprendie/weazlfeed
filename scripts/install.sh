@@ -2,10 +2,12 @@
 set -euo pipefail
 
 APP_NAME="weazlfeed"
+SETUP_NAME="weazlfeed-setup"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_ROOT="${WEAZLFEED_HOME:-"$HOME/.weazlfeed"}"
 BIN_DIR="$INSTALL_ROOT/bin"
 BIN_PATH="$BIN_DIR/$APP_NAME"
+SETUP_BIN_PATH="$BIN_DIR/$SETUP_NAME"
 GO_CACHE="${GOCACHE:-"$REPO_ROOT/.gocache"}"
 GO_MOD_CACHE="${GOMODCACHE:-"$REPO_ROOT/.gomodcache"}"
 
@@ -55,8 +57,10 @@ echo "Building $APP_NAME..."
 (
   cd "$REPO_ROOT"
   GOCACHE="$GO_CACHE" GOMODCACHE="$GO_MOD_CACHE" go build -buildvcs=false -o "$BIN_PATH" ./cmd/weazlfeed
+  GOCACHE="$GO_CACHE" GOMODCACHE="$GO_MOD_CACHE" go build -buildvcs=false -o "$SETUP_BIN_PATH" ./cmd/weazlfeed-setup
 )
 chmod 0755 "$BIN_PATH"
+chmod 0755 "$SETUP_BIN_PATH"
 
 path_line='export PATH="$HOME/.weazlfeed/bin:$PATH"'
 marker_begin="# >>> weazlfeed path >>>"
@@ -82,12 +86,10 @@ if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
 fi
 
 echo "Installed $APP_NAME to $BIN_PATH"
+echo "Installed $SETUP_NAME to $SETUP_BIN_PATH"
 echo ""
 echo "Configuring local model provider..."
-(
-  cd "$REPO_ROOT"
-  GOCACHE="$GO_CACHE" GOMODCACHE="$GO_MOD_CACHE" go run -buildvcs=false ./cmd/weazlfeed-setup
-)
+"$SETUP_BIN_PATH"
 
 if [[ "${WEAZLFEED_SKIP_LAUNCH:-}" == "1" ]]; then
   echo "Skipping first launch because WEAZLFEED_SKIP_LAUNCH=1"
