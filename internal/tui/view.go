@@ -24,6 +24,9 @@ func (m Model) View() string {
 		m.panel("ITEMS", m.renderItems(dims.center, bodyHeight), dims.center, bodyHeight, m.focus == focusItems),
 		m.panel("READER", m.renderStage(dims.right, bodyHeight), dims.right, bodyHeight, m.focus == focusArticle),
 	)
+	if m.urlInput {
+		body = m.renderURLModal(bodyHeight)
+	}
 	footer := m.footer()
 	return m.styles.frame.Width(m.width).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
 }
@@ -116,7 +119,7 @@ func (m Model) renderItems(width, height int) string {
 
 func (m Model) renderStage(width, height int) string {
 	width = panelContentWidth(m.styles.panel, width)
-	if m.asking || m.folderInput || m.podcastInput || m.urlInput {
+	if m.asking || m.folderInput || m.podcastInput {
 		return truncate(m.input.View(), width)
 	}
 	if m.rendering {
@@ -128,6 +131,29 @@ func (m Model) renderStage(width, height int) string {
 		lines[i] = truncate(lines[i], width-2)
 	}
 	return fitLines(lines, height-3)
+}
+
+func (m Model) renderURLModal(bodyHeight int) string {
+	outerWidth := clampInt(m.width-8, 32, 88)
+	contentWidth := max(20, outerWidth-4)
+	input := m.input
+	input.Width = contentWidth
+	targetSection, targetFolder := m.selectedFolderTarget()
+	target := targetSection + "/" + targetFolder
+	lines := []string{
+		m.styles.status.Render("ADD SOURCE URL"),
+		m.styles.help.Render(truncate("target: "+target+" | gopher and audio feeds auto-route", contentWidth)),
+		"",
+		input.View(),
+		"",
+		m.styles.help.Render("enter add | esc cancel"),
+	}
+	modal := m.styles.panel.
+		Width(contentWidth).
+		BorderForeground(crushPink).
+		Padding(1, 2).
+		Render(strings.Join(lines, "\n"))
+	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
 }
 
 func (m Model) footer() string {
