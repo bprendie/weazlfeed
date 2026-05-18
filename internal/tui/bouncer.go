@@ -11,6 +11,14 @@ import (
 )
 
 func (m Model) updateBouncer(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case bouncerRulesMsg:
+		return m.handleBouncerRulesMsg(msg)
+	case bouncerActionMsg:
+		return m.handleBouncerActionMsg(msg)
+	case bouncerScanMsg:
+		return m.handleBouncerScanMsg(msg)
+	}
 	if m.bouncerInput {
 		return m.updateBouncerInput(msg)
 	}
