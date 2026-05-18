@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"os"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ func Open(path string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	_ = os.Chmod(path, 0o600)
 	return s, nil
 }
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bprendie/weazlfeed/internal/auth"
 	"github.com/bprendie/weazlfeed/internal/config"
 	"github.com/bprendie/weazlfeed/internal/podcast"
 	"github.com/bprendie/weazlfeed/internal/store"
@@ -64,6 +65,9 @@ func addPodcast(results []podcast.Result, index int) {
 		fatal(err)
 	}
 	defer vault.Close()
+	if err := auth.UnlockOrCreate(vault); err != nil {
+		fatal(err)
+	}
 	result := results[index-1]
 	if _, err := vault.UpsertFeed(result.Title, result.FeedURL, "rss", "Podcasts", "Search", "Search"); err != nil {
 		fatal(err)

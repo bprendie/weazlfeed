@@ -35,8 +35,9 @@ The installer builds:
 - `weazlfeed-import`
 - `weazlfeed-refresh`
 - `weazlfeed-podcast-search`
+- `weazlfeed-prune`
 
-Both are installed to:
+They are installed to:
 
 ```text
 ~/.weazlfeed/bin
@@ -59,6 +60,10 @@ Text reading works without `mpv`, `ffmpeg`, or a local model.
 ```sh
 weazlfeed
 ```
+
+On first launch, WeazlFeed asks you to create a vault password. Later launches
+require that password before the TUI opens. The password is checked with bcrypt,
+and the SQLite database file is forced to `0600` permissions.
 
 Run setup again any time:
 
@@ -123,6 +128,16 @@ Refresh all feeds from the shell with a per-feed status report:
 ```sh
 weazlfeed-refresh
 ```
+
+Prune old cached items without deleting subscriptions:
+
+```sh
+weazlfeed-prune -days 30
+```
+
+By default pruning keeps unread items and podcast items with saved playback
+positions. Use `-keep-unread=false` or `-keep-playhead=false` to prune more
+aggressively.
 
 OPML files are ignored by Git so private or personally curated feed lists stay
 local.
@@ -198,6 +213,7 @@ go build ./cmd/weazlfeed
 go build ./cmd/weazlfeed-setup
 go build ./cmd/weazlfeed-refresh
 go build ./cmd/weazlfeed-podcast-search
+go build ./cmd/weazlfeed-prune
 ```
 
 The codebase is intentionally modular. Keep files below 400 LOC unless there is
@@ -212,3 +228,5 @@ a strong reason not to.
   provider is running.
 - Gopher connection fails: the target host may be offline, blocked, or not
   serving port 70.
+- Forgotten vault password: there is no recovery flow; back up or replace the
+  local database.

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/bprendie/weazlfeed/internal/store"
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -262,24 +261,6 @@ func (m Model) stageLineCount() int {
 		return 1
 	}
 	return len(strings.Split(m.article, "\n"))
-}
-
-func (m Model) renderMarkdown(text string) string {
-	text = strings.TrimSpace(text)
-	if text == "" {
-		return ""
-	}
-	dims, _ := m.layout()
-	width := max(20, panelContentWidth(m.styles.panel, dims.right)-2)
-	renderer, err := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(width))
-	if err != nil {
-		return text
-	}
-	rendered, err := renderer.Render(text)
-	if err != nil {
-		return text
-	}
-	return strings.TrimRight(rendered, "\n")
 }
 
 func (m Model) visibleFeeds() []store.Feed {

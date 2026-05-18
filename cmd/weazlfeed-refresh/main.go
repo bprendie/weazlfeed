@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bprendie/weazlfeed/internal/app"
+	"github.com/bprendie/weazlfeed/internal/auth"
 	"github.com/bprendie/weazlfeed/internal/config"
 	"github.com/bprendie/weazlfeed/internal/llm"
 	"github.com/bprendie/weazlfeed/internal/store"
@@ -26,6 +27,9 @@ func main() {
 		fatal(err)
 	}
 	defer vault.Close()
+	if err := auth.UnlockOrCreate(vault); err != nil {
+		fatal(err)
+	}
 	feeds, err := vault.Feeds()
 	if err != nil {
 		fatal(err)

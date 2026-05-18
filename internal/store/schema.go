@@ -46,6 +46,12 @@ CREATE TABLE IF NOT EXISTS bouncer_rules (
 	rule_prompt TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS vault (
+	id INTEGER PRIMARY KEY CHECK (id = 1),
+	password_hash TEXT NOT NULL,
+	created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE INDEX IF NOT EXISTS idx_items_feed_date ON items(feed_id, published_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_items_unread ON items(read_status);
 
