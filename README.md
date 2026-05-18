@@ -33,6 +33,8 @@ The installer builds:
 - `weazlfeed`
 - `weazlfeed-setup`
 - `weazlfeed-import`
+- `weazlfeed-refresh`
+- `weazlfeed-podcast-search`
 
 Both are installed to:
 
@@ -75,7 +77,9 @@ weazlfeed-setup
 | `enter` | Read item, dial Gopher target, or play audio |
 | `space` | Pause/resume audio |
 | `s` | Stop audio |
-| `r` | Refresh feeds |
+| `p` | Search podcasts |
+| `r` | Refresh selected source |
+| `R` | Refresh all sources |
 | `h` | Hide/show sludge-flagged items |
 | `ctrl+a` | Ask the local model about the active item |
 | `ctrl+t` | Generate a 3-point tactical summary |
@@ -100,6 +104,23 @@ Import OPML feed lists with:
 
 ```sh
 weazlfeed-import feeds.opml
+```
+
+Search Apple Podcasts without a paid API key:
+
+```sh
+weazlfeed-podcast-search "darknet diaries"
+weazlfeed-podcast-search -add 1 "darknet diaries"
+```
+
+Added podcast feeds land under `Podcasts/Search`.
+Inside the TUI, press `p`, enter a query, select a result, and press `enter`
+to subscribe.
+
+Refresh all feeds from the shell with a per-feed status report:
+
+```sh
+weazlfeed-refresh
 ```
 
 OPML files are ignored by Git so private or personally curated feed lists stay
@@ -174,6 +195,8 @@ WEAZLFEED_HOME=/path/to/install-root ./scripts/install.sh
 go test ./...
 go build ./cmd/weazlfeed
 go build ./cmd/weazlfeed-setup
+go build ./cmd/weazlfeed-refresh
+go build ./cmd/weazlfeed-podcast-search
 ```
 
 The codebase is intentionally modular. Keep files below 400 LOC unless there is

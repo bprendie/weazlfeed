@@ -10,7 +10,7 @@ import (
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if m.asking || m.folderInput {
+	if m.asking || m.folderInput || m.podcastInput {
 		return m.updateInput(msg)
 	}
 	switch msg := msg.(type) {
@@ -34,12 +34,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case itemsMsg:
 		m.items, m.err = msg.items, errText(msg.err)
+		m.podcasts = nil
 		m.clamp()
 		m.renderArticle()
 	case fetchMsg:
 		m.refreshing = false
 		m.err = errText(msg.err)
-		m.status = "refresh complete: new " + intText(msg.added) + " failed " + intText(msg.failed)
+		m.status = "refresh complete: checked " + intText(msg.checked) + " new " + intText(msg.added) + " failed " + intText(msg.failed)
 		return m, loadFeedsCmd(m.store)
 	case aiMsg:
 		m.err = errText(msg.err)
@@ -53,6 +54,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.article = msg.text
 			m.stageScroll = 0
 			m.status = "gopher target loaded"
+		}
+	case podcastSearchMsg:
+		m.err = errText(msg.err)
+		if msg.err == nil {
+			m.podcasts = msg.results
+			m.itemCursor = 0
+			m.itemScroll = 0
+			m.focus = focusItems
+			m.article = "Select a podcast result and press enter to subscribe."
+			m.status = "podcast search: " + intText(len(msg.results)) + " results"
 		}
 	case meterMsg:
 		sample := audio.Sample(msg)
@@ -126,6 +137,12 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.input.Focus()
 			return m, nil
 		}
+	case "p":
+		m.podcastInput = true
+		m.input.Placeholder = "podcast search"
+		m.input.Prompt = "podcast> "
+		m.input.Focus()
+		return m, nil
 	case "ctrl+a":
 		if m.aiEnabled && len(m.items) > 0 {
 			m.asking = true
@@ -147,6 +164,7 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "esc", "ctrl+c":
 			m.asking = false
 			m.folderInput = false
+			m.podcastInput = false
 			m.input.Blur()
 			m.input.SetValue("")
 			m.input.Prompt = "interrogate> "
@@ -155,12 +173,21 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			question := strings.TrimSpace(m.input.Value())
 			m.asking = false
 			folderInput := m.folderInput
+			podcastInput := m.podcastInput
 			m.folderInput = false
+			m.podcastInput = false
 			m.input.Blur()
 			m.input.SetValue("")
 			m.input.Prompt = "interrogate> "
 			if folderInput {
 				return m.createFolder(question)
+			}
+			if podcastInput {
+				if question == "" {
+					return m, nil
+				}
+				m.status = "searching podcasts"
+				return m, podcastSearchCmd(question)
 			}
 			if question != "" && len(m.items) > 0 {
 				m.status = "interrogating active article"

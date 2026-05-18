@@ -20,13 +20,16 @@ func (m *Model) move(delta int) {
 			m.itemScroll = 0
 			m.stageScroll = 0
 			m.items = nil
+			m.podcasts = nil
 			m.article = ""
 		}
 	case focusItems:
 		m.itemCursor += delta
 		m.clamp()
 		m.ensureCursorVisible()
-		m.renderArticle()
+		if !m.podcastMode() {
+			m.renderArticle()
+		}
 	case focusArticle:
 		m.stageScroll += delta
 		m.clampScrolls()
@@ -115,7 +118,9 @@ func (m *Model) home() {
 		m.feedCursor, m.feedScroll = 0, 0
 	case focusItems:
 		m.itemCursor, m.itemScroll = 0, 0
-		m.renderArticle()
+		if !m.podcastMode() {
+			m.renderArticle()
+		}
 	case focusArticle:
 		m.stageScroll = 0
 	}
@@ -126,8 +131,10 @@ func (m *Model) end() {
 	case focusFeeds:
 		m.feedCursor = len(m.feeds) - 1
 	case focusItems:
-		m.itemCursor = len(m.items) - 1
-		m.renderArticle()
+		m.itemCursor = m.itemTargetCount() - 1
+		if !m.podcastMode() {
+			m.renderArticle()
+		}
 	case focusArticle:
 		m.stageScroll = len(strings.Split(m.article, "\n"))
 	}
@@ -158,13 +165,19 @@ func (m *Model) scrollFocused(delta int) {
 	m.ensureCursorVisible()
 	m.clampScrolls()
 	if m.focus == focusItems {
-		m.renderArticle()
+		if !m.podcastMode() {
+			m.renderArticle()
+		}
 	}
 }
 
 func (m Model) activate() (tea.Model, tea.Cmd) {
 	if m.focus == focusFeeds && len(m.feeds) > 0 {
+		m.podcasts = nil
 		return m, loadItemsCmd(m.store, m.feeds[m.feedCursor].ID, m.hideSludge)
+	}
+	if m.focus == focusItems && m.podcastMode() {
+		return m.subscribePodcast()
 	}
 	if len(m.items) == 0 {
 		return m, nil
@@ -224,8 +237,9 @@ func (m *Model) clamp() {
 	if m.itemCursor < 0 {
 		m.itemCursor = 0
 	}
-	if m.itemCursor >= len(m.items) && len(m.items) > 0 {
-		m.itemCursor = len(m.items) - 1
+	itemCount := m.itemTargetCount()
+	if m.itemCursor >= itemCount && itemCount > 0 {
+		m.itemCursor = itemCount - 1
 	}
 }
 
@@ -251,7 +265,7 @@ func (m *Model) clampScrolls() {
 	_, bodyHeight := m.layout()
 	visible := max(1, bodyHeight-3)
 	m.feedScroll = clampInt(m.feedScroll, 0, max(0, len(m.feeds)-visible))
-	m.itemScroll = clampInt(m.itemScroll, 0, max(0, len(m.items)-visible))
+	m.itemScroll = clampInt(m.itemScroll, 0, max(0, m.itemTargetCount()-visible))
 	lines := strings.Split(m.article, "\n")
 	m.stageScroll = clampInt(m.stageScroll, 0, max(0, len(lines)-visible))
 }

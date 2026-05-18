@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/bprendie/weazlfeed/internal/audio"
+	"github.com/bprendie/weazlfeed/internal/podcast"
 	"github.com/bprendie/weazlfeed/internal/store"
 )
 
@@ -17,9 +18,10 @@ type itemsMsg struct {
 }
 
 type fetchMsg struct {
-	added  int
-	failed int
-	err    error
+	checked int
+	added   int
+	failed  int
+	err     error
 }
 
 type aiMsg struct {
@@ -34,4 +36,9 @@ type playheadTickMsg struct{}
 type articleMsg struct {
 	text string
 	err  error
+}
+
+type podcastSearchMsg struct {
+	results []podcast.Result
+	err     error
 }

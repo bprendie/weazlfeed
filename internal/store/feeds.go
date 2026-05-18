@@ -16,16 +16,13 @@ func (s *Store) UpsertFeed(title, url, feedType, section, folder, category strin
 	if err := s.UpsertFolder(section, folder); err != nil {
 		return 0, err
 	}
-	res, err := s.db.Exec(`
+	_, err := s.db.Exec(`
 		INSERT INTO feeds(title, url, type, section, folder, category) VALUES(?, ?, ?, ?, ?, ?)
 		ON CONFLICT(url) DO UPDATE SET title=excluded.title, type=excluded.type,
 			section=excluded.section, folder=excluded.folder, category=excluded.category
 	`, title, url, feedType, section, folder, category)
 	if err != nil {
 		return 0, err
-	}
-	if id, err := res.LastInsertId(); err == nil && id > 0 {
-		return id, nil
 	}
 	var id int64
 	err = s.db.QueryRow(`SELECT id FROM feeds WHERE url = ?`, url).Scan(&id)

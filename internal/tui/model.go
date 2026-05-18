@@ -6,6 +6,7 @@ import (
 	"github.com/bprendie/weazlfeed/internal/audio"
 	"github.com/bprendie/weazlfeed/internal/config"
 	"github.com/bprendie/weazlfeed/internal/llm"
+	"github.com/bprendie/weazlfeed/internal/podcast"
 	"github.com/bprendie/weazlfeed/internal/store"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -38,6 +39,7 @@ type Model struct {
 	feeds        []store.Feed
 	folders      []store.Folder
 	items        []store.Item
+	podcasts     []podcast.Result
 	feedCursor   int
 	itemCursor   int
 	feedScroll   int
@@ -50,6 +52,7 @@ type Model struct {
 	aiEnabled    bool
 	asking       bool
 	folderInput  bool
+	podcastInput bool
 	paused       bool
 	bars         []float64
 	playingID    int64

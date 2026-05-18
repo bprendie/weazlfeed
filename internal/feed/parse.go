@@ -50,6 +50,7 @@ type rssItem struct {
 	Title       string       `xml:"title"`
 	Link        string       `xml:"link"`
 	PubDate     string       `xml:"pubDate"`
+	Date        string       `xml:"date"`
 	Description string       `xml:"description"`
 	Content     string       `xml:"encoded"`
 	Enclosure   rssEnclosure `xml:"enclosure"`
@@ -72,7 +73,7 @@ func parseRSS(body []byte) (Feed, error) {
 			GUID:            firstNonEmpty(src.GUID, src.Link, src.Title),
 			Title:           cleanText(src.Title),
 			Link:            strings.TrimSpace(src.Link),
-			PublishedAt:     parseDate(src.PubDate),
+			PublishedAt:     parseDate(firstNonEmpty(src.PubDate, src.Date)),
 			ContentHTML:     html,
 			ContentMarkdown: HTMLToMarkdown(html),
 			EnclosureURL:    strings.TrimSpace(src.Enclosure.URL),
@@ -144,7 +145,7 @@ func atomLinks(links []atomLink) (string, string, string) {
 
 func parseDate(value string) time.Time {
 	value = strings.TrimSpace(value)
-	for _, layout := range []string{time.RFC1123Z, time.RFC1123, time.RFC3339, time.RFC822Z, time.RFC822} {
+	for _, layout := range []string{time.RFC1123Z, time.RFC1123, time.RFC3339, time.RFC3339Nano, time.RFC822Z, time.RFC822, "2006-01-02T15:04:05-07:00"} {
 		if t, err := time.Parse(layout, value); err == nil {
 			return t
 		}

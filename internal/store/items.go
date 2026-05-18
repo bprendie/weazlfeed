@@ -44,6 +44,12 @@ func (s *Store) Items(feedID int64, hideSludge bool) ([]Item, error) {
 	return items, rows.Err()
 }
 
+func (s *Store) ItemCount(feedID int64) (int, error) {
+	var count int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM items WHERE feed_id = ?`, feedID).Scan(&count)
+	return count, err
+}
+
 func (s *Store) MarkRead(id int64) error {
 	_, err := s.db.Exec(`UPDATE items SET read_status = 1 WHERE id = ?`, id)
 	return err

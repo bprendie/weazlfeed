@@ -4,10 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/bprendie/weazlfeed/internal/app"
 	"github.com/bprendie/weazlfeed/internal/audio"
 	"github.com/bprendie/weazlfeed/internal/config"
 	"github.com/bprendie/weazlfeed/internal/feed"
 	"github.com/bprendie/weazlfeed/internal/llm"
+	"github.com/bprendie/weazlfeed/internal/podcast"
 	"github.com/bprendie/weazlfeed/internal/store"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -68,67 +70,10 @@ func refreshCmd(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Cmd {
 }
 
 func refresh(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Msg {
-	client := feed.NewClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
-	added := 0
-	failed := 0
-	rules, err := vault.Rules()
-	if err != nil {
-		return fetchMsg{err: err}
-	}
-	rulePrompts := make([]string, 0, len(rules))
-	for _, rule := range rules {
-		rulePrompts = append(rulePrompts, rule.Prompt)
-	}
-	useBouncer := len(rulePrompts) > 0 && ai.Available(ctx)
-	for _, src := range feeds {
-		parsed, err := client.Fetch(ctx, src.URL, src.ETag, src.LastModified)
-		if err != nil {
-			_ = vault.SetFeedStatus(src.ID, 0, "", "", err.Error())
-			failed++
-			continue
-		}
-		_ = vault.SetFeedStatus(src.ID, parsed.Status, parsed.ETag, parsed.LastModified, "")
-		if parsed.NotModified {
-			_ = vault.MarkFetched(src.ID, time.Now())
-			continue
-		}
-		title := firstText(parsed.Title, src.Title, src.URL)
-		feedID, err := vault.UpsertFeed(title, src.URL, parsed.Type, src.Section, src.Folder, src.Category)
-		if err != nil {
-			return fetchMsg{added: added, failed: failed, err: err}
-		}
-		for _, parsedItem := range parsed.Items {
-			item := store.Item{
-				FeedID:          feedID,
-				GUID:            parsedItem.GUID,
-				Title:           firstText(parsedItem.Title, "untitled"),
-				Link:            parsedItem.Link,
-				PublishedAt:     parsedItem.PublishedAt,
-				ContentHTML:     parsedItem.ContentHTML,
-				ContentMarkdown: parsedItem.ContentMarkdown,
-				EnclosureURL:    parsedItem.EnclosureURL,
-				EnclosureType:   parsedItem.EnclosureType,
-			}
-			if useBouncer {
-				flagged, err := ai.FlagSludge(ctx, item.ContentMarkdown, rulePrompts)
-				if err == nil {
-					item.SludgeFlag = flagged
-					item.SludgeChecked = true
-				}
-			}
-			ok, err := vault.UpsertItem(item)
-			if err != nil {
-				return fetchMsg{added: added, failed: failed, err: err}
-			}
-			if ok {
-				added++
-			}
-		}
-		_ = vault.MarkFetched(feedID, time.Now())
-	}
-	return fetchMsg{added: added, failed: failed}
+	result, err := app.Refresh(ctx, vault, feeds, ai)
+	return fetchMsg{checked: result.Checked, added: result.Added, failed: result.Failed, err: err}
 }
 
 func aiCmd(ai llm.Client, mode string, item store.Item, question string) tea.Cmd {
@@ -143,6 +88,15 @@ func aiCmd(ai llm.Client, mode string, item store.Item, question string) tea.Cmd
 			text, err = ai.Triage(ctx, item.ContentMarkdown)
 		}
 		return aiMsg{text: text, err: err}
+	}
+}
+
+func podcastSearchCmd(query string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		results, err := podcast.NewClient().Search(ctx, query, 20)
+		return podcastSearchMsg{results: results, err: err}
 	}
 }
 

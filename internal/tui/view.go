@@ -86,6 +86,9 @@ func (m Model) renderFeeds(width, height int) string {
 }
 
 func (m Model) renderItems(width, height int) string {
+	if m.podcastMode() {
+		return m.renderPodcastItems(width, height)
+	}
 	width = panelContentWidth(m.styles.panel, width)
 	if len(m.items) == 0 {
 		return m.styles.help.Render(truncate("No items loaded.", width))
@@ -110,7 +113,7 @@ func (m Model) renderItems(width, height int) string {
 
 func (m Model) renderStage(width, height int) string {
 	width = panelContentWidth(m.styles.panel, width)
-	if m.asking {
+	if m.asking || m.folderInput || m.podcastInput {
 		return truncate(m.input.View(), width)
 	}
 	lines := strings.Split(m.article, "\n")
@@ -138,7 +141,7 @@ func (m Model) footer() string {
 		picked = " | picked source"
 	}
 	parts := []string{
-		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [tab] node [enter] open [space] pick/drop [n] folder [r] refresh source [R] refresh all [q] quit", max(10, m.width))),
+		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [tab] node [enter] open [space] pick/drop [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
 		m.styles.status.Render(ai + " | " + audioState + picked + compactVisualizer(m.visualizer())),
 	}
 	if m.err != "" {
