@@ -20,7 +20,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.lockMode != lockOpen {
 		return m.updateLock(msg)
 	}
-	if m.asking || m.folderInput || m.podcastInput {
+	if m.asking || m.folderInput || m.podcastInput || m.urlInput {
 		return m.updateInput(msg)
 	}
 	switch msg := msg.(type) {
@@ -71,6 +71,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = errText(msg.err)
 		m.status = "refresh complete: checked " + intText(msg.checked) + " new " + intText(msg.added) + " failed " + intText(msg.failed)
 		return m, loadFeedsCmd(m.store)
+	case addFeedMsg:
+		m.refreshing = false
+		m.itemCache = map[int64][]store.Item{}
+		m.err = errText(msg.err)
+		if msg.err == nil && msg.title != "" {
+			m.status = "added " + msg.title + " -> " + msg.section + "/" + msg.folder + " (" + intText(msg.added) + " items)"
+			return m, loadFeedsCmd(m.store)
+		}
 	case aiMsg:
 		m.err = errText(msg.err)
 		if msg.err == nil {
@@ -218,6 +226,15 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.input.Focus()
 			return m, nil
 		}
+	case "a":
+		if m.focus == focusFeeds {
+			m.urlInput = true
+			m.input.Placeholder = "feed or gopher url"
+			m.input.Prompt = "url> "
+			m.input.EchoMode = textinput.EchoNormal
+			m.input.Focus()
+			return m, nil
+		}
 	case "p":
 		m.podcastInput = true
 		m.input.Placeholder = "podcast search"
@@ -248,6 +265,7 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.asking = false
 			m.folderInput = false
 			m.podcastInput = false
+			m.urlInput = false
 			m.input.Blur()
 			m.input.SetValue("")
 			m.input.Prompt = "interrogate> "
@@ -257,8 +275,10 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.asking = false
 			folderInput := m.folderInput
 			podcastInput := m.podcastInput
+			urlInput := m.urlInput
 			m.folderInput = false
 			m.podcastInput = false
+			m.urlInput = false
 			m.input.Blur()
 			m.input.SetValue("")
 			m.input.Prompt = "interrogate> "
@@ -271,6 +291,9 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				m.status = "searching podcasts"
 				return m, podcastSearchCmd(question)
+			}
+			if urlInput {
+				return m.addURL(question)
 			}
 			if question != "" && len(m.items) > 0 {
 				m.status = "interrogating active article"

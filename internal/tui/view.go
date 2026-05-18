@@ -116,7 +116,7 @@ func (m Model) renderItems(width, height int) string {
 
 func (m Model) renderStage(width, height int) string {
 	width = panelContentWidth(m.styles.panel, width)
-	if m.asking || m.folderInput || m.podcastInput {
+	if m.asking || m.folderInput || m.podcastInput || m.urlInput {
 		return truncate(m.input.View(), width)
 	}
 	if m.rendering {
@@ -150,7 +150,7 @@ func (m Model) footer() string {
 		picked = " | picked source"
 	}
 	parts := []string{
-		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [enter] open/fold [esc/left] back [right] expand [space] pick/drop [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
+		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [enter] open/fold [esc/left] back [right] expand [space] pick/drop [a] add url [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
 		m.styles.status.Render(ai + " | " + audioState + picked + compactVisualizer(m.visualizer())),
 	}
 	if m.err != "" {

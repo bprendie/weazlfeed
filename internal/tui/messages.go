@@ -30,6 +30,15 @@ type fetchMsg struct {
 	err     error
 }
 
+type addFeedMsg struct {
+	feedID  int64
+	title   string
+	section string
+	folder  string
+	added   int
+	err     error
+}
+
 type aiMsg struct {
 	text string
 	err  error

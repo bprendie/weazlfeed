@@ -91,6 +91,90 @@ func refresh(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Msg {
 	return fetchMsg{checked: result.Checked, added: result.Added, failed: result.Failed, err: err}
 }
 
+func addFeedCmd(vault *store.Store, rawURL, section, folder string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+		defer cancel()
+		rawURL = strings.TrimSpace(rawURL)
+		if rawURL == "" {
+			return addFeedMsg{}
+		}
+		feedType := "rss"
+		if feed.IsGopher(rawURL) {
+			feedType = "gopher"
+			section = "Gopher"
+			if folder == "" || folder == "Search" || folder == "General" {
+				folder = "Directory"
+			}
+		}
+		parsed, err := feed.NewClient().Fetch(ctx, rawURL, "", "")
+		if err != nil {
+			return addFeedMsg{err: err}
+		}
+		if parsed.Type != "" {
+			feedType = parsed.Type
+		}
+		if feedHasAudio(parsed) {
+			section = "Podcasts"
+			if folder == "" || folder == "Directory" || folder == "General" {
+				folder = "Search"
+			}
+		}
+		if section == "" {
+			section = "News"
+		}
+		if folder == "" {
+			folder = "General"
+		}
+		title := firstText(parsed.Title, rawURL)
+		feedID, err := vault.UpsertFeed(title, rawURL, feedType, section, folder, folder)
+		if err != nil {
+			return addFeedMsg{err: err}
+		}
+		added := 0
+		for _, parsedItem := range parsed.Items {
+			item := store.Item{
+				FeedID:          feedID,
+				GUID:            firstText(parsedItem.GUID, parsedItem.Link, parsedItem.Title),
+				Title:           firstText(parsedItem.Title, "untitled"),
+				Link:            parsedItem.Link,
+				PublishedAt:     parsedItem.PublishedAt,
+				ContentHTML:     parsedItem.ContentHTML,
+				ContentMarkdown: parsedItem.ContentMarkdown,
+				EnclosureURL:    parsedItem.EnclosureURL,
+				EnclosureType:   parsedItem.EnclosureType,
+				SludgeChecked:   true,
+			}
+			ok, err := vault.UpsertItem(item)
+			if err != nil {
+				return addFeedMsg{err: err}
+			}
+			if ok {
+				added++
+			}
+		}
+		_ = vault.MarkFetched(feedID, time.Now())
+		_ = vault.SetFeedStatus(feedID, parsed.Status, parsed.ETag, parsed.LastModified, "")
+		return addFeedMsg{feedID: feedID, title: title, section: section, folder: folder, added: added}
+	}
+}
+
+func feedHasAudio(parsed feed.Feed) bool {
+	for _, item := range parsed.Items {
+		if strings.HasPrefix(item.EnclosureType, "audio/") || looksAudioURL(item.EnclosureURL) {
+			return true
+		}
+	}
+	return false
+}
+
+func looksAudioURL(raw string) bool {
+	raw = strings.ToLower(strings.TrimSpace(raw))
+	return strings.HasSuffix(raw, ".mp3") || strings.HasSuffix(raw, ".m4a") ||
+		strings.HasSuffix(raw, ".aac") || strings.HasSuffix(raw, ".ogg") ||
+		strings.HasSuffix(raw, ".opus") || strings.HasSuffix(raw, ".wav")
+}
+
 func aiCmd(ai llm.Client, mode string, item store.Item, question string) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
