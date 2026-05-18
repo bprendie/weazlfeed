@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 )
 
 type focus int
@@ -27,7 +26,6 @@ type Model struct {
 	cfgPath      string
 	store        *store.Store
 	styles       styles
-	renderer     *glamour.TermRenderer
 	ai           llm.Client
 	player       audio.Player
 	meter        *audio.Meter
@@ -61,7 +59,6 @@ type Model struct {
 }
 
 func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
-	renderer, _ := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(80))
 	input := textinput.New()
 	input.Placeholder = "ask the active article"
 	input.CharLimit = 500
@@ -73,7 +70,6 @@ func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
 		cfgPath:    cfgPath,
 		store:      vault,
 		styles:     newStyles(),
-		renderer:   renderer,
 		ai:         llm.New(cfg.Active()),
 		input:      input,
 		spinner:    spin,

@@ -75,6 +75,7 @@ weazlfeed-setup
 | `Home` / `End` | Jump within the focused pane |
 | `tab` | Manually switch focus and expand that pane |
 | `enter` | Open source, read item, dial Gopher target, or play audio |
+| `esc` | Move back one pane |
 | `space` | Pause/resume audio |
 | `s` | Stop audio |
 | `p` | Search podcasts |

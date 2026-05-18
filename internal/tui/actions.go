@@ -36,6 +36,15 @@ func (m *Model) move(delta int) {
 	}
 }
 
+func (m *Model) retreat() {
+	if m.focus > focusFeeds {
+		m.focus--
+	}
+	m.status = "back"
+	m.clamp()
+	m.ensureCursorVisible()
+}
+
 func (m Model) pickOrDropFeed() (tea.Model, tea.Cmd) {
 	feed := m.feeds[m.feedCursor]
 	if m.pickedFeedID == 0 {
@@ -107,7 +116,7 @@ func (m *Model) page(delta int) {
 	m.clamp()
 	m.ensureCursorVisible()
 	m.clampScrolls()
-	if m.focus == focusItems {
+	if m.focus == focusItems && !m.podcastMode() {
 		m.renderArticle()
 	}
 }
@@ -136,7 +145,7 @@ func (m *Model) end() {
 			m.renderArticle()
 		}
 	case focusArticle:
-		m.stageScroll = len(strings.Split(m.article, "\n"))
+		m.stageScroll = m.stageLineCount()
 	}
 	m.clamp()
 	m.ensureCursorVisible()
@@ -274,8 +283,7 @@ func (m *Model) clampScrolls() {
 	visible := max(1, bodyHeight-3)
 	m.feedScroll = clampInt(m.feedScroll, 0, max(0, len(m.feeds)-visible))
 	m.itemScroll = clampInt(m.itemScroll, 0, max(0, m.itemTargetCount()-visible))
-	lines := strings.Split(m.article, "\n")
-	m.stageScroll = clampInt(m.stageScroll, 0, max(0, len(lines)-visible))
+	m.stageScroll = clampInt(m.stageScroll, 0, max(0, m.stageLineCount()-visible))
 }
 
 func (m *Model) renderArticle() {
@@ -287,10 +295,6 @@ func (m *Model) renderArticle() {
 	text := item.ContentMarkdown
 	if text == "" {
 		text = item.Link
-	}
-	if rendered, err := m.renderer.Render(text); err == nil {
-		m.article = rendered
-		return
 	}
 	m.article = text
 }

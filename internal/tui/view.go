@@ -5,7 +5,9 @@ import (
 	"strings"
 
 	"github.com/bprendie/weazlfeed/internal/store"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func (m Model) View() string {
@@ -116,7 +118,7 @@ func (m Model) renderStage(width, height int) string {
 	if m.asking || m.folderInput || m.podcastInput {
 		return truncate(m.input.View(), width)
 	}
-	lines := strings.Split(m.article, "\n")
+	lines := m.stageLines(width - 2)
 	lines = windowLines(lines, m.stageScroll, height-3)
 	for i := range lines {
 		lines[i] = truncate(lines[i], width-2)
@@ -141,7 +143,7 @@ func (m Model) footer() string {
 		picked = " | picked source"
 	}
 	parts := []string{
-		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [tab] node [enter] open [space] pick/drop [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
+		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [enter] open [esc] back [tab] node [space] pick/drop [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
 		m.styles.status.Render(ai + " | " + audioState + picked + compactVisualizer(m.visualizer())),
 	}
 	if m.err != "" {
@@ -255,6 +257,28 @@ func compactVisualizer(value string) string {
 	return " | " + value
 }
 
+func (m Model) stageLines(width int) []string {
+	width = max(20, width)
+	if m.article == "" {
+		return []string{""}
+	}
+	renderer, err := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(width))
+	if err != nil {
+		return strings.Split(m.article, "\n")
+	}
+	rendered, err := renderer.Render(m.article)
+	if err != nil {
+		return strings.Split(m.article, "\n")
+	}
+	return strings.Split(strings.TrimRight(rendered, "\n"), "\n")
+}
+
+func (m Model) stageLineCount() int {
+	dims, _ := m.layout()
+	width := panelContentWidth(m.styles.panel, dims.right) - 2
+	return len(m.stageLines(width))
+}
+
 func (m Model) visibleFeeds() []store.Feed {
 	_, bodyHeight := m.layout()
 	return windowFeeds(m.feeds, m.feedScroll, max(1, bodyHeight-3))
@@ -287,14 +311,10 @@ func truncate(value string, width int) string {
 	if width <= 0 {
 		return ""
 	}
-	runes := []rune(value)
-	if len(runes) <= width {
+	if ansi.StringWidth(value) <= width {
 		return value
 	}
-	if width <= 1 {
-		return string(runes[:width])
-	}
-	return string(runes[:width-1]) + "…"
+	return ansi.Truncate(value, width, "…")
 }
 
 func formatClock(seconds int) string {

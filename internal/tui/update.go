@@ -87,6 +87,8 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "tab":
 		m.focus = (m.focus + 1) % 3
+	case "esc":
+		m.retreat()
 	case "j", "down":
 		m.move(1)
 	case "k", "up":
