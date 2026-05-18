@@ -1,5 +1,7 @@
 # WeazlFeed
 
+![WeazlFeed terminal interface](weazlfeed.png)
+
 Burn the algorithmic timeline and bypass the podcast-industrial complex.
 WeazlFeed rips RSS, Atom, and straight-up 1993 Gopher payloads directly into
 the terminal. It strips the HTML bloat, kills the tracking pixels, and renders
