@@ -161,19 +161,19 @@ func (s *Store) encryptRules() error {
 }
 
 func (s *Store) encryptAIOutputs() error {
-	rows, err := s.db.Query(`SELECT id, prompt, response FROM ai_outputs`)
+	rows, err := s.db.Query(`SELECT id, coalesce(item_title, ''), coalesce(item_content, ''), prompt, response FROM ai_outputs`)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	type aiRow struct {
-		id               int64
-		prompt, response string
+		id                               int64
+		title, content, prompt, response string
 	}
 	var outputs []aiRow
 	for rows.Next() {
 		var out aiRow
-		if err := rows.Scan(&out.id, &out.prompt, &out.response); err != nil {
+		if err := rows.Scan(&out.id, &out.title, &out.content, &out.prompt, &out.response); err != nil {
 			return err
 		}
 		outputs = append(outputs, out)
@@ -182,6 +182,14 @@ func (s *Store) encryptAIOutputs() error {
 		return err
 	}
 	for _, out := range outputs {
+		title, err := s.encryptText(s.decryptText(out.title))
+		if err != nil {
+			return err
+		}
+		content, err := s.encryptText(s.decryptText(out.content))
+		if err != nil {
+			return err
+		}
 		prompt, err := s.encryptText(s.decryptText(out.prompt))
 		if err != nil {
 			return err
@@ -190,7 +198,7 @@ func (s *Store) encryptAIOutputs() error {
 		if err != nil {
 			return err
 		}
-		if _, err := s.db.Exec(`UPDATE ai_outputs SET prompt = ?, response = ? WHERE id = ?`, prompt, response, out.id); err != nil {
+		if _, err := s.db.Exec(`UPDATE ai_outputs SET item_title = ?, item_content = ?, prompt = ?, response = ? WHERE id = ?`, title, content, prompt, response, out.id); err != nil {
 			return err
 		}
 	}

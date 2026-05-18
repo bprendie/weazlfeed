@@ -88,19 +88,18 @@ func refreshOne(ctx context.Context, vault *store.Store, client feed.Client, src
 			EnclosureType:   parsedItem.EnclosureType,
 			DurationSeconds: parsedItem.DurationSeconds,
 		}
-		if useBouncer {
-			flagged, err := ai.FlagSludge(ctx, item.ContentMarkdown, rules)
-			if err == nil {
-				item.SludgeFlag = flagged
-				item.SludgeChecked = true
-			}
-		}
 		ok, err := vault.UpsertItem(item)
 		if err != nil {
 			return added, parsed.Status, false, err
 		}
 		if ok {
 			added++
+			if useBouncer {
+				flagged, err := ai.FlagSludge(ctx, item.ContentMarkdown, rules)
+				if err == nil {
+					_ = vault.SetSludgeByGUID(feedID, item.GUID, flagged)
+				}
+			}
 		}
 	}
 	return added, parsed.Status, false, vault.MarkFetched(feedID, time.Now())

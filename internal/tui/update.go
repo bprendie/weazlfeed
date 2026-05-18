@@ -51,6 +51,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case feedsMsg:
 		m.feeds, m.err = msg.feeds, errText(msg.err)
 		m.folders = msg.folders
+		m.interrogations = msg.interrogations
 		m.revealPendingFeed()
 		m.clamp()
 		if len(m.feeds) > 0 {
@@ -98,18 +99,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.itemCache = map[int64][]store.Item{}
 		m.err = errText(msg.err)
 		if msg.err == nil {
-			m.items = nil
-			m.clearArticle()
-			m.status = "deleted feed: " + msg.title
+			if msg.kind == "interrogation" {
+				m.status = "deleted interrogation: " + msg.title
+			} else {
+				m.items = nil
+				m.clearArticle()
+				m.status = "deleted feed: " + msg.title
+			}
 			return m, loadFeedsCmd(m.store)
 		}
 	case aiMsg:
 		m.aiWorking = false
 		m.aiAction = ""
 		m.aiStartedAt = time.Time{}
+		m.aiReqIn = msg.inTokens
+		m.aiReqOut = msg.outTokens
 		m.err = errText(msg.err)
 		if msg.err == nil {
 			m.showAIOutput(msg)
+			if msg.kind == "ask" {
+				return m, loadFeedsCmd(m.store)
+			}
 		}
 	case articleMsg:
 		m.rendering = false
@@ -335,6 +345,8 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.aiWorking = true
 			m.aiAction = "extracting critical points"
 			m.aiStartedAt = time.Now()
+			m.aiReqIn = estimateTokens(m.items[m.itemCursor].ContentMarkdown)
+			m.aiReqOut = 0
 			m.status = "extracting critical points"
 			return m, tea.Batch(aiCmd(m.store, m.ai, "triage", m.items[m.itemCursor], ""), m.spinner.Tick, aiTickCmd())
 		}
@@ -373,6 +385,8 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.aiWorking = true
 				m.aiAction = "interrogating article"
 				m.aiStartedAt = time.Now()
+				m.aiReqIn = estimateTokens(m.items[m.itemCursor].ContentMarkdown) + estimateTokens(question)
+				m.aiReqOut = 0
 				m.status = "interrogating active article"
 				return m, tea.Batch(aiCmd(m.store, m.ai, "ask", m.items[m.itemCursor], question), m.spinner.Tick, aiTickCmd())
 			}

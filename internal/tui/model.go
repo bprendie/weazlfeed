@@ -9,6 +9,7 @@ import (
 	"github.com/bprendie/weazlfeed/internal/llm"
 	"github.com/bprendie/weazlfeed/internal/podcast"
 	"github.com/bprendie/weazlfeed/internal/store"
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -50,11 +51,13 @@ type Model struct {
 	meter            *audio.Meter
 	input            textinput.Model
 	spinner          spinner.Model
+	contextBar       progress.Model
 	focus            focus
 	width            int
 	height           int
 	feeds            []store.Feed
 	folders          []store.Folder
+	interrogations   []store.AIOutput
 	items            []store.Item
 	gopherStack      [][]store.Item
 	itemCache        map[int64][]store.Item
@@ -85,6 +88,7 @@ type Model struct {
 	confirmDelete    bool
 	deleteFeedID     int64
 	deleteFeedTitle  string
+	deleteKind       string
 	paused           bool
 	energy           audio.Sample
 	visualizer       Visualizer
@@ -100,6 +104,8 @@ type Model struct {
 	aiWorking        bool
 	aiAction         string
 	aiStartedAt      time.Time
+	aiReqIn          int
+	aiReqOut         int
 	pickedFeedID     int64
 	lockMode         lockMode
 	pendingPass      string
@@ -113,6 +119,7 @@ func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
 	input.Prompt = "interrogate> "
 	spin := spinner.New()
 	spin.Spinner = spinner.Line
+	contextBar := progress.New(progress.WithDefaultGradient(), progress.WithoutPercentage())
 	mode := lockUnlock
 	if has, err := vault.HasLock(); err == nil && !has {
 		mode = lockCreate
@@ -132,6 +139,7 @@ func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
 		itemCache:  map[int64][]store.Item{},
 		input:      input,
 		spinner:    spin,
+		contextBar: contextBar,
 		focus:      focusFeeds,
 		hideSludge: cfg.UI.HideSludge,
 		status:     "r refresh source | R refresh all | space pick/drop | n folder",

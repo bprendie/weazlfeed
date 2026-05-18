@@ -168,6 +168,15 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 		if row.kind == sourceFolder {
 			return m.toggleCurrentFolder(!row.collapsed)
 		}
+		if row.kind == sourceInterrogation {
+			if row.aiIndex < 0 || row.aiIndex >= len(m.interrogations) {
+				return m, nil
+			}
+			m.focus = focusArticle
+			m.stageScroll = 0
+			m.showInterrogation(m.interrogations[row.aiIndex])
+			return m, nil
+		}
 		if row.kind != sourceFeed {
 			return m, nil
 		}
@@ -338,45 +347,6 @@ func (m *Model) rerenderArticle() {
 	if m.savedRawArticle != "" {
 		m.savedArticle = m.renderMarkdown(m.savedRawArticle)
 	}
-}
-
-func (m *Model) showAIOutput(msg aiMsg) {
-	if m.articleMode == articleNormal {
-		m.savedRawArticle = m.rawArticle
-		m.savedArticle = m.article
-	}
-	title := "AI TRIAGE"
-	m.articleMode = articleTriage
-	if msg.kind == "ask" {
-		title = "INTERROGATION ROOM"
-		m.articleMode = articleAsk
-	}
-	body := "# " + title + "\n\n"
-	if msg.question != "" {
-		body += "**Q:** " + msg.question + "\n\n"
-	}
-	body += strings.TrimSpace(msg.text)
-	m.rawArticle = body
-	m.article = m.renderMarkdown(body)
-	m.stageScroll = 0
-	m.focus = focusArticle
-	if msg.cached {
-		m.status = "cached local extraction"
-	} else {
-		m.status = "local extraction complete"
-	}
-}
-
-func (m *Model) restoreArticle() {
-	if m.savedRawArticle != "" || m.savedArticle != "" {
-		m.rawArticle = m.savedRawArticle
-		m.article = m.savedArticle
-		m.savedRawArticle = ""
-		m.savedArticle = ""
-	}
-	m.articleMode = articleNormal
-	m.stageScroll = 0
-	m.status = "article restored"
 }
 
 func errText(err error) string {

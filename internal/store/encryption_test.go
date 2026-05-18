@@ -30,7 +30,8 @@ func TestCreateLockEncryptsExistingRows(t *testing.T) {
 	if err := vault.CreateLock("test-password"); err != nil {
 		t.Fatal(err)
 	}
-	if err := vault.SaveAIOutput(1, "triage", "prompt", "response"); err != nil {
+	itemForAI := Item{ID: 1, Title: "Plain Item", ContentMarkdown: "Secret"}
+	if err := vault.SaveAIOutput(itemForAI, "triage", "prompt", "response"); err != nil {
 		t.Fatal(err)
 	}
 

@@ -63,7 +63,7 @@ func (m Model) header(width int) string {
 
 func (m Model) renderFeeds(width, height int) string {
 	width = panelContentWidth(m.styles.panel, width)
-	if len(m.feeds) == 0 {
+	if len(m.feeds) == 0 && len(m.interrogations) == 0 {
 		return m.styles.help.Render(truncate("No feeds yet. Add feeds in config, then run setup or refresh.", width))
 	}
 	rows := m.sourceRows()
@@ -94,6 +94,14 @@ func (m Model) renderFeeds(width, height int) string {
 			line := truncate(" - "+prefix+" "+row.title+" ["+intText(row.unread)+"]", width)
 			if rowIndex == m.sourceCursor {
 				line = m.styles.selected.Render(truncate("=> "+prefix+" "+row.title+" ["+intText(row.unread)+"]", width))
+			} else {
+				line = m.styles.item.Render(line)
+			}
+			lines = append(lines, line)
+		case sourceInterrogation:
+			line := truncate(" ?  "+row.title, width)
+			if rowIndex == m.sourceCursor {
+				line = m.styles.selected.Render(truncate("=> ?  "+row.title, width))
 			} else {
 				line = m.styles.item.Render(line)
 			}
@@ -132,7 +140,11 @@ func (m Model) renderStage(width, height int) string {
 		return truncate(m.input.View(), width)
 	}
 	if m.aiWorking {
-		return fitLines([]string{m.styles.status.Render(gradientStatus(m.spinner.View() + " " + m.aiWorkingText()))}, height-3)
+		lines := []string{
+			m.styles.status.Render(gradientStatus(m.spinner.View() + " " + m.aiWorkingText())),
+			m.aiMetricsView(width),
+		}
+		return fitLines(lines, height-3)
 	}
 	if m.rendering {
 		return fitLines([]string{m.styles.status.Render(m.spinner.View() + " rendering reader")}, height-3)
@@ -179,16 +191,22 @@ func (m Model) footer() string {
 	if m.aiWorking {
 		audioState = m.spinner.View() + " " + m.aiWorkingText()
 	}
+	aiKeys := ""
+	if m.aiEnabled {
+		aiKeys = " [ctrl+a ask] [ctrl+t triage]"
+	}
 	picked := ""
 	if m.pickedFeedID != 0 {
 		picked = " | picked source"
 	}
 	parts := []string{
 		m.styles.help.Render(truncate("[j/k] nav [enter] open [esc/left] back [a] add [r/R] refresh [ctrl+k] keys [q] quit", max(10, m.width))),
-		m.styles.status.Render(ai + " | " + audioState + picked),
+		m.styles.status.Render(ai + aiKeys + " | " + audioState + picked),
 	}
 	if m.err != "" {
 		parts = append(parts, m.styles.error.Render(m.err))
+	} else if m.aiWorking {
+		parts = append(parts, m.aiMetricsView(m.width))
 	} else {
 		parts = append(parts, m.styles.help.Render(m.status))
 	}

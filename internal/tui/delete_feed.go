@@ -7,12 +7,24 @@ func (m Model) startDeleteFeed() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	row, ok := m.selectedSourceRow()
-	if !ok || row.kind != sourceFeed {
-		m.status = "select a feed to delete"
+	if !ok || (row.kind != sourceFeed && row.kind != sourceInterrogation) {
+		m.status = "select a feed or interrogation to delete"
+		return m, nil
+	}
+	m.deleteKind = "feed"
+	m.confirmDelete = true
+	if row.kind == sourceInterrogation {
+		if row.aiIndex < 0 || row.aiIndex >= len(m.interrogations) {
+			return m, nil
+		}
+		out := m.interrogations[row.aiIndex]
+		m.deleteKind = "interrogation"
+		m.deleteFeedID = out.ID
+		m.deleteFeedTitle = interrogationTitle(out)
+		m.status = "confirm delete"
 		return m, nil
 	}
 	feed := m.feeds[row.feedIndex]
-	m.confirmDelete = true
 	m.deleteFeedID = feed.ID
 	m.deleteFeedTitle = feed.Title
 	m.status = "confirm delete"
@@ -32,8 +44,12 @@ func (m Model) updateDeleteFeed(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case "enter", "y", "Y":
 		feedID := m.deleteFeedID
 		title := m.deleteFeedTitle
+		kind := m.deleteKind
 		m.clearDeleteFeed()
 		m.status = "deleting " + title
+		if kind == "interrogation" {
+			return m, deleteInterrogationCmd(m.store, feedID, title)
+		}
 		return m, deleteFeedCmd(m.store, feedID, title)
 	}
 	return m, nil
@@ -43,4 +59,5 @@ func (m *Model) clearDeleteFeed() {
 	m.confirmDelete = false
 	m.deleteFeedID = 0
 	m.deleteFeedTitle = ""
+	m.deleteKind = ""
 }

@@ -105,6 +105,14 @@ func (s *Store) SetSludge(id int64, flagged bool) error {
 	return err
 }
 
+func (s *Store) SetSludgeByGUID(feedID int64, guid string, flagged bool) error {
+	_, err := s.db.Exec(`
+		UPDATE items SET sludge_flag = ?, sludge_checked = 1
+		WHERE feed_id = ? AND guid = ?
+	`, flagged, feedID, guid)
+	return err
+}
+
 func (s *Store) SetPlayhead(id int64, seconds int) error {
 	if seconds < 0 {
 		seconds = 0

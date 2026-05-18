@@ -6,9 +6,10 @@ import (
 )
 
 type feedsMsg struct {
-	feeds   []store.Feed
-	folders []store.Folder
-	err     error
+	feeds          []store.Feed
+	folders        []store.Folder
+	interrogations []store.AIOutput
+	err            error
 }
 
 type itemsMsg struct {
@@ -39,18 +40,21 @@ type addFeedMsg struct {
 }
 
 type deleteFeedMsg struct {
-	feedID int64
-	title  string
-	err    error
+	id    int64
+	kind  string
+	title string
+	err   error
 }
 
 type aiMsg struct {
-	itemID   int64
-	kind     string
-	question string
-	text     string
-	cached   bool
-	err      error
+	itemID    int64
+	kind      string
+	question  string
+	text      string
+	cached    bool
+	inTokens  int
+	outTokens int
+	err       error
 }
 
 type playheadTickMsg struct{}

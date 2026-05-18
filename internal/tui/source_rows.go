@@ -8,6 +8,7 @@ const (
 	sourceSection sourceRowKind = iota
 	sourceFolder
 	sourceFeed
+	sourceInterrogation
 )
 
 type sourceRow struct {
@@ -15,6 +16,7 @@ type sourceRow struct {
 	section   string
 	folder    string
 	feedIndex int
+	aiIndex   int
 	title     string
 	collapsed bool
 	unread    int
@@ -22,8 +24,8 @@ type sourceRow struct {
 
 func (m Model) sourceRows() []sourceRow {
 	rows := []sourceRow{}
-	sections := []string{"News", "Podcasts", "Gopher"}
-	sectionSeen := map[string]bool{"News": true, "Podcasts": true, "Gopher": true}
+	sections := []string{"News", "Podcasts", "Gopher", "Interrogations"}
+	sectionSeen := map[string]bool{"News": true, "Podcasts": true, "Gopher": true, "Interrogations": true}
 	foldersBySection := map[string][]string{
 		"News":     []string{"General"},
 		"Podcasts": []string{"Search"},
@@ -61,6 +63,12 @@ func (m Model) sourceRows() []sourceRow {
 	}
 	for _, section := range sections {
 		rows = append(rows, sourceRow{kind: sourceSection, section: section, title: section})
+		if section == "Interrogations" {
+			for i, out := range m.interrogations {
+				rows = append(rows, sourceRow{kind: sourceInterrogation, section: section, aiIndex: i, title: interrogationTitle(out)})
+			}
+			continue
+		}
 		for _, folder := range foldersBySection[section] {
 			collapsed := m.folderCollapsed(section, folder)
 			rows = append(rows, sourceRow{kind: sourceFolder, section: section, folder: folder, title: folder, collapsed: collapsed})
@@ -77,6 +85,10 @@ func (m Model) sourceRows() []sourceRow {
 		}
 	}
 	return rows
+}
+
+func interrogationTitle(out store.AIOutput) string {
+	return firstText(out.ItemTitle, out.Prompt, "interrogation")
 }
 
 func (m Model) visibleFeedIndices() []int {

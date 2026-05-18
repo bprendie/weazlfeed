@@ -124,12 +124,18 @@ func (m Model) renderDeleteFeedModal(bodyHeight int) string {
 	outerWidth := clampInt(m.width-8, 36, 88)
 	contentWidth := max(24, outerWidth-4)
 	title := truncate(m.deleteFeedTitle, contentWidth)
+	heading := "DELETE FEED?"
+	detail := "This removes the source and its local items."
+	if m.deleteKind == "interrogation" {
+		heading = "DELETE INTERROGATION?"
+		detail = "This removes the saved local AI artifact."
+	}
 	lines := []string{
-		m.styles.error.Render("DELETE FEED?"),
+		m.styles.error.Render(heading),
 		"",
 		m.styles.item.Render(title),
 		"",
-		m.styles.help.Render("This removes the source and its local items."),
+		m.styles.help.Render(detail),
 		m.styles.help.Render("enter/y confirms | esc/n cancels"),
 	}
 	modal := m.styles.panel.

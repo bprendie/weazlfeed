@@ -34,7 +34,8 @@ func seedFeedsCmd(vault *store.Store, seeds []config.SeedFeed) tea.Cmd {
 		}
 		feeds, err := vault.Feeds()
 		folders, folderErr := vault.Folders()
-		return feedsMsg{feeds: feeds, folders: folders, err: firstErr(err, folderErr)}
+		interrogations, aiErr := vault.AIOutputs("ask")
+		return feedsMsg{feeds: feeds, folders: folders, interrogations: interrogations, err: firstErr(err, folderErr, aiErr)}
 	}
 }
 
@@ -42,7 +43,8 @@ func loadFeedsCmd(vault *store.Store) tea.Cmd {
 	return func() tea.Msg {
 		feeds, err := vault.Feeds()
 		folders, folderErr := vault.Folders()
-		return feedsMsg{feeds: feeds, folders: folders, err: firstErr(err, folderErr)}
+		interrogations, aiErr := vault.AIOutputs("ask")
+		return feedsMsg{feeds: feeds, folders: folders, interrogations: interrogations, err: firstErr(err, folderErr, aiErr)}
 	}
 }
 
@@ -161,7 +163,13 @@ func addFeedCmd(vault *store.Store, rawURL, section, folder string) tea.Cmd {
 
 func deleteFeedCmd(vault *store.Store, feedID int64, title string) tea.Cmd {
 	return func() tea.Msg {
-		return deleteFeedMsg{feedID: feedID, title: title, err: vault.DeleteFeed(feedID)}
+		return deleteFeedMsg{id: feedID, kind: "feed", title: title, err: vault.DeleteFeed(feedID)}
+	}
+}
+
+func deleteInterrogationCmd(vault *store.Store, id int64, title string) tea.Cmd {
+	return func() tea.Msg {
+		return deleteFeedMsg{id: id, kind: "interrogation", title: title, err: vault.DeleteAIOutput(id)}
 	}
 }
 
@@ -192,9 +200,10 @@ func aiCmd(vault *store.Store, ai llm.Client, mode string, item store.Item, ques
 			}
 			item = full
 		}
+		inTokens := estimateTokens(item.ContentMarkdown) + estimateTokens(question)
 		if mode == "triage" && item.ID != 0 {
 			if out, err := vault.AIOutput(item.ID, "triage"); err == nil && out.Response != "" {
-				return aiMsg{itemID: item.ID, kind: mode, text: out.Response, cached: true}
+				return aiMsg{itemID: item.ID, kind: mode, text: out.Response, cached: true, inTokens: inTokens, outTokens: estimateTokens(out.Response)}
 			}
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
@@ -208,9 +217,9 @@ func aiCmd(vault *store.Store, ai llm.Client, mode string, item store.Item, ques
 			text, err = ai.Triage(ctx, body)
 		}
 		if err == nil && item.ID != 0 && text != "" {
-			_ = vault.SaveAIOutput(item.ID, mode, question, text)
+			_ = vault.SaveAIOutput(item, mode, question, text)
 		}
-		return aiMsg{itemID: item.ID, kind: mode, question: question, text: text, err: err}
+		return aiMsg{itemID: item.ID, kind: mode, question: question, text: text, inTokens: inTokens, outTokens: estimateTokens(text), err: err}
 	}
 }
 
@@ -220,6 +229,14 @@ func trimAIInput(markdown string) string {
 		return markdown
 	}
 	return markdown[:aiMaxChars] + "\n\n[TRUNCATED FOR LOCAL MODEL SPEED]"
+}
+
+func estimateTokens(text string) int {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return 0
+	}
+	return max(1, len([]rune(text))/4)
 }
 
 func podcastSearchCmd(query string) tea.Cmd {
