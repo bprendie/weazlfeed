@@ -23,7 +23,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.helpOpen {
 		return m.updateHelp(msg)
 	}
-	if m.asking || m.folderInput || m.podcastInput || m.urlInput {
+	if m.podcastInput {
+		return m.updatePodcastDirectory(msg)
+	}
+	if m.asking || m.folderInput || m.urlInput {
 		return m.updateInput(msg)
 	}
 	switch msg := msg.(type) {
@@ -138,10 +141,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = errText(msg.err)
 		if msg.err == nil {
 			m.podcasts = msg.results
-			m.itemCursor = 0
-			m.itemScroll = 0
-			m.focus = focusItems
-			m.setArticle("Select a podcast result and press enter to subscribe.")
+			m.podcastCursor = 0
+			m.podcastScroll = 0
+			m.input.Blur()
 			m.status = "podcast search: " + intText(len(msg.results)) + " results"
 		}
 	case playheadTickMsg:
@@ -277,6 +279,10 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "p":
 		m.podcastInput = true
+		m.podcasts = nil
+		m.podcastCursor = 0
+		m.podcastScroll = 0
+		m.input.SetValue("")
 		m.input.Placeholder = "podcast search"
 		m.input.Prompt = "podcast> "
 		m.input.EchoMode = textinput.EchoNormal
@@ -304,7 +310,6 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "esc", "ctrl+c":
 			m.asking = false
 			m.folderInput = false
-			m.podcastInput = false
 			m.urlInput = false
 			m.input.Blur()
 			m.input.SetValue("")
@@ -314,23 +319,14 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			question := strings.TrimSpace(m.input.Value())
 			m.asking = false
 			folderInput := m.folderInput
-			podcastInput := m.podcastInput
 			urlInput := m.urlInput
 			m.folderInput = false
-			m.podcastInput = false
 			m.urlInput = false
 			m.input.Blur()
 			m.input.SetValue("")
 			m.input.Prompt = "interrogate> "
 			if folderInput {
 				return m.createFolder(question)
-			}
-			if podcastInput {
-				if question == "" {
-					return m, nil
-				}
-				m.status = "searching podcasts"
-				return m, podcastSearchCmd(question)
 			}
 			if urlInput {
 				return m.addURL(question)

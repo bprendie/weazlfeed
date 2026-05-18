@@ -71,3 +71,49 @@ func (m Model) renderAudioModal(bodyHeight int) string {
 		Render(strings.Join(lines, "\n"))
 	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
 }
+
+func (m Model) renderPodcastModal(bodyHeight int) string {
+	outerWidth := clampInt(m.width-8, 48, 100)
+	contentWidth := max(32, outerWidth-4)
+	contentHeight := max(10, bodyHeight-4)
+	input := m.input
+	input.Width = contentWidth
+	lines := []string{
+		m.styles.status.Render("PODCAST DIRECTORY"),
+		input.View(),
+		m.styles.help.Render("enter search/add | a add | / search | esc close"),
+		"",
+	}
+	resultHeight := max(1, contentHeight-len(lines))
+	start := clampInt(m.podcastScroll, 0, len(m.podcasts))
+	end := clampInt(start+resultHeight, start, len(m.podcasts))
+	if len(m.podcasts) == 0 {
+		lines = append(lines, m.styles.help.Render("Search Apple Podcasts by title, network, or host."))
+	} else {
+		for i, result := range m.podcasts[start:end] {
+			index := start + i
+			title := result.Title
+			if result.Author != "" {
+				title += " / " + result.Author
+			}
+			if result.EpisodeCount > 0 {
+				title += " [" + intText(result.EpisodeCount) + " eps]"
+			}
+			line := truncate(" - "+title, contentWidth)
+			if index == m.podcastCursor && !m.input.Focused() {
+				line = m.styles.selected.Render(truncate("=> "+title, contentWidth))
+			} else {
+				line = m.styles.item.Render(line)
+			}
+			lines = append(lines, line)
+		}
+	}
+	content := strings.Join(exactLines(lines, contentHeight), "\n")
+	modal := m.styles.panel.
+		Width(contentWidth).
+		Height(contentHeight).
+		BorderForeground(crushPink).
+		Padding(1, 2).
+		Render(content)
+	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
+}

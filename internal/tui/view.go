@@ -27,6 +27,9 @@ func (m Model) View() string {
 	if m.playingID != 0 {
 		body = m.renderAudioModal(bodyHeight)
 	}
+	if m.podcastInput {
+		body = m.renderPodcastModal(bodyHeight)
+	}
 	if m.urlInput {
 		body = m.renderURLModal(bodyHeight)
 	}
@@ -98,9 +101,6 @@ func (m Model) renderFeeds(width, height int) string {
 }
 
 func (m Model) renderItems(width, height int) string {
-	if m.podcastMode() {
-		return m.renderPodcastItems(width, height)
-	}
 	width = panelContentWidth(m.styles.panel, width)
 	if len(m.items) == 0 {
 		return m.styles.help.Render(truncate("No items loaded.", width))
@@ -125,7 +125,7 @@ func (m Model) renderItems(width, height int) string {
 
 func (m Model) renderStage(width, height int) string {
 	width = panelContentWidth(m.styles.panel, width)
-	if m.asking || m.folderInput || m.podcastInput {
+	if m.asking || m.folderInput {
 		return truncate(m.input.View(), width)
 	}
 	if m.rendering {

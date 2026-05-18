@@ -184,9 +184,6 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 		m.stageScroll = 0
 		return m, loadItemsCmd(m.store, feed.ID, m.hideSludge)
 	}
-	if m.focus == focusItems && m.podcastMode() {
-		return m.subscribePodcast()
-	}
 	if len(m.items) == 0 {
 		return m, nil
 	}

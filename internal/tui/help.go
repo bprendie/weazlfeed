@@ -39,8 +39,9 @@ Sources and folders
   h                   Hide or show items flagged as sludge.
 
 Podcasts and audio
-  p                   Search podcasts.
-  enter on result     Subscribe the podcast into the selected Podcasts folder.
+  p                   Open the podcast directory.
+  /                   Focus podcast search inside the directory.
+  enter or a          Subscribe the selected podcast result.
   enter on audio      Play or resume with mpv.
   space               Pause or resume audio when not picking/dropping a source.
   < or ,              Seek backward 10 seconds.
