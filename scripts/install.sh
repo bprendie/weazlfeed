@@ -7,6 +7,7 @@ IMPORT_NAME="weazlfeed-import"
 REFRESH_NAME="weazlfeed-refresh"
 PODCAST_SEARCH_NAME="weazlfeed-podcast-search"
 PRUNE_NAME="weazlfeed-prune"
+VAULT_NAME="weazlfeed-vault"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_ROOT="${WEAZLFEED_HOME:-"$HOME/.weazlfeed"}"
 BIN_DIR="$INSTALL_ROOT/bin"
@@ -16,6 +17,7 @@ IMPORT_BIN_PATH="$BIN_DIR/$IMPORT_NAME"
 REFRESH_BIN_PATH="$BIN_DIR/$REFRESH_NAME"
 PODCAST_SEARCH_BIN_PATH="$BIN_DIR/$PODCAST_SEARCH_NAME"
 PRUNE_BIN_PATH="$BIN_DIR/$PRUNE_NAME"
+VAULT_BIN_PATH="$BIN_DIR/$VAULT_NAME"
 GO_CACHE="${GOCACHE:-"$REPO_ROOT/.gocache"}"
 GO_MOD_CACHE="${GOMODCACHE:-"$REPO_ROOT/.gomodcache"}"
 
@@ -70,6 +72,7 @@ echo "Building $APP_NAME..."
   GOCACHE="$GO_CACHE" GOMODCACHE="$GO_MOD_CACHE" go build -buildvcs=false -o "$REFRESH_BIN_PATH" ./cmd/weazlfeed-refresh
   GOCACHE="$GO_CACHE" GOMODCACHE="$GO_MOD_CACHE" go build -buildvcs=false -o "$PODCAST_SEARCH_BIN_PATH" ./cmd/weazlfeed-podcast-search
   GOCACHE="$GO_CACHE" GOMODCACHE="$GO_MOD_CACHE" go build -buildvcs=false -o "$PRUNE_BIN_PATH" ./cmd/weazlfeed-prune
+  GOCACHE="$GO_CACHE" GOMODCACHE="$GO_MOD_CACHE" go build -buildvcs=false -o "$VAULT_BIN_PATH" ./cmd/weazlfeed-vault
 )
 chmod 0755 "$BIN_PATH"
 chmod 0755 "$SETUP_BIN_PATH"
@@ -77,6 +80,7 @@ chmod 0755 "$IMPORT_BIN_PATH"
 chmod 0755 "$REFRESH_BIN_PATH"
 chmod 0755 "$PODCAST_SEARCH_BIN_PATH"
 chmod 0755 "$PRUNE_BIN_PATH"
+chmod 0755 "$VAULT_BIN_PATH"
 
 path_line='export PATH="$HOME/.weazlfeed/bin:$PATH"'
 marker_begin="# >>> weazlfeed path >>>"
@@ -107,6 +111,7 @@ echo "Installed $IMPORT_NAME to $IMPORT_BIN_PATH"
 echo "Installed $REFRESH_NAME to $REFRESH_BIN_PATH"
 echo "Installed $PODCAST_SEARCH_NAME to $PODCAST_SEARCH_BIN_PATH"
 echo "Installed $PRUNE_NAME to $PRUNE_BIN_PATH"
+echo "Installed $VAULT_NAME to $VAULT_BIN_PATH"
 echo ""
 echo "Configuring local model provider..."
 "$SETUP_BIN_PATH"

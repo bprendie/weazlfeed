@@ -10,7 +10,9 @@ import (
 )
 
 type Store struct {
-	db *sql.DB
+	db       *sql.DB
+	key      []byte
+	unlocked bool
 }
 
 func Open(path string) (*Store, error) {

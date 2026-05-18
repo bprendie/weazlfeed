@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"sort"
 	"time"
 )
 
@@ -16,15 +17,36 @@ func (s *Store) UpsertFeed(title, url, feedType, section, folder, category strin
 	if err := s.UpsertFolder(section, folder); err != nil {
 		return 0, err
 	}
-	_, err := s.db.Exec(`
-		INSERT INTO feeds(title, url, type, section, folder, category) VALUES(?, ?, ?, ?, ?, ?)
-		ON CONFLICT(url) DO UPDATE SET title=excluded.title, type=excluded.type
-	`, title, url, feedType, section, folder, category)
+	feedKey := s.feedKey(url)
+	title, err := s.encryptText(title)
+	if err != nil {
+		return 0, err
+	}
+	encryptedURL, err := s.encryptText(url)
+	if err != nil {
+		return 0, err
+	}
+	section, err = s.encryptText(section)
+	if err != nil {
+		return 0, err
+	}
+	folder, err = s.encryptText(folder)
+	if err != nil {
+		return 0, err
+	}
+	category, err = s.encryptText(category)
+	if err != nil {
+		return 0, err
+	}
+	_, err = s.db.Exec(`
+		INSERT INTO feeds(title, url, type, section, folder, category, feed_key) VALUES(?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(feed_key) DO UPDATE SET title=excluded.title, type=excluded.type
+	`, title, encryptedURL, feedType, section, folder, category, feedKey)
 	if err != nil {
 		return 0, err
 	}
 	var id int64
-	err = s.db.QueryRow(`SELECT id FROM feeds WHERE url = ?`, url).Scan(&id)
+	err = s.db.QueryRow(`SELECT id FROM feeds WHERE feed_key = ?`, feedKey).Scan(&id)
 	return id, err
 }
 
@@ -53,10 +75,22 @@ func (s *Store) Feeds() ([]Feed, error) {
 			&fetched, &f.ETag, &f.LastModified, &f.LastError, &f.LastStatus, &f.Unread); err != nil {
 			return nil, err
 		}
+		f.Title = s.decryptText(f.Title)
+		f.URL = s.decryptText(f.URL)
+		f.Section = s.decryptText(f.Section)
+		f.Folder = s.decryptText(f.Folder)
+		f.Category = s.decryptText(f.Category)
+		f.LastError = s.decryptText(f.LastError)
 		f.LastFetched = parseTime(fetched)
 		feeds = append(feeds, f)
 	}
-	return feeds, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	sort.SliceStable(feeds, func(i, j int) bool {
+		return feedSortKey(feeds[i]) < feedSortKey(feeds[j])
+	})
+	return feeds, nil
 }
 
 func sectionFromType(feedType string) string {
@@ -100,7 +134,11 @@ func (s *Store) MarkFetched(feedID int64, when time.Time) error {
 }
 
 func (s *Store) SetFeedStatus(feedID int64, status int, etag, modified, lastError string) error {
-	_, err := s.db.Exec(`
+	lastError, err := s.encryptText(lastError)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`
 		UPDATE feeds
 		SET last_status = ?, etag = coalesce(nullif(?, ''), etag),
 			last_modified = coalesce(nullif(?, ''), last_modified), last_error = ?
@@ -113,11 +151,36 @@ func (s *Store) MoveFeed(feedID int64, section, folder string) error {
 	if err := s.UpsertFolder(section, folder); err != nil {
 		return err
 	}
-	_, err := s.db.Exec(`UPDATE feeds SET section = ?, folder = ?, category = ? WHERE id = ?`, section, folder, folder, feedID)
+	encSection, err := s.encryptText(section)
+	if err != nil {
+		return err
+	}
+	encFolder, err := s.encryptText(folder)
+	if err != nil {
+		return err
+	}
+	encCategory, err := s.encryptText(folder)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`UPDATE feeds SET section = ?, folder = ?, category = ? WHERE id = ?`, encSection, encFolder, encCategory, feedID)
 	return err
 }
 
 func (s *Store) DeleteFeed(feedID int64) error {
 	_, err := s.db.Exec(`DELETE FROM feeds WHERE id = ?`, feedID)
 	return err
+}
+
+func feedSortKey(f Feed) string {
+	section := "3:" + f.Section
+	switch f.Section {
+	case "News":
+		section = "0:News"
+	case "Podcasts":
+		section = "1:Podcasts"
+	case "Gopher":
+		section = "2:Gopher"
+	}
+	return section + "\x00" + f.Folder + "\x00" + f.Title
 }

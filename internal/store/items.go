@@ -3,6 +3,27 @@ package store
 import "database/sql"
 
 func (s *Store) UpsertItem(item Item) (bool, error) {
+	var err error
+	item.Title, err = s.encryptText(item.Title)
+	if err != nil {
+		return false, err
+	}
+	item.Link, err = s.encryptText(item.Link)
+	if err != nil {
+		return false, err
+	}
+	item.ContentHTML, err = s.encryptText(item.ContentHTML)
+	if err != nil {
+		return false, err
+	}
+	item.ContentMarkdown, err = s.encryptText(item.ContentMarkdown)
+	if err != nil {
+		return false, err
+	}
+	item.EnclosureURL, err = s.encryptText(item.EnclosureURL)
+	if err != nil {
+		return false, err
+	}
 	res, err := s.db.Exec(`
 		INSERT INTO items(
 			feed_id, guid, title, link, published_at, content_html, content_markdown,
@@ -47,6 +68,7 @@ func (s *Store) Items(feedID int64, hideSludge bool) ([]Item, error) {
 		if err != nil {
 			return nil, err
 		}
+		s.decryptItem(&item)
 		items = append(items, item)
 	}
 	return items, rows.Err()
@@ -59,7 +81,12 @@ func (s *Store) Item(id int64) (Item, error) {
 		FROM items
 		WHERE id = ?
 	`, id)
-	return scanItem(row)
+	item, err := scanItem(row)
+	if err != nil {
+		return item, err
+	}
+	s.decryptItem(&item)
+	return item, nil
 }
 
 func (s *Store) ItemCount(feedID int64) (int, error) {
@@ -98,9 +125,18 @@ func (s *Store) Rules() ([]BouncerRule, error) {
 		if err := rows.Scan(&r.ID, &r.Prompt); err != nil {
 			return nil, err
 		}
+		r.Prompt = s.decryptText(r.Prompt)
 		rules = append(rules, r)
 	}
 	return rules, rows.Err()
+}
+
+func (s *Store) decryptItem(item *Item) {
+	item.Title = s.decryptText(item.Title)
+	item.Link = s.decryptText(item.Link)
+	item.ContentHTML = s.decryptText(item.ContentHTML)
+	item.ContentMarkdown = s.decryptText(item.ContentMarkdown)
+	item.EnclosureURL = s.decryptText(item.EnclosureURL)
 }
 
 type scanner interface {

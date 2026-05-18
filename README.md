@@ -19,6 +19,7 @@ No browser tabs. No walled gardens. Just the raw feed on the bare metal.
 - `ffmpeg`-powered Harmonica EQ visualizer when audio is active.
 - Podcast directory search inside the TUI, no paid API key required.
 - Local LLM integration for article Q&A, tactical summaries, and sludge rules.
+- Vault password unlock with encrypted feed/article payloads at rest.
 - Three-pane BBS-style TUI with focused pane expansion.
 
 ## Install
@@ -37,6 +38,7 @@ The installer builds:
 - `weazlfeed-refresh`
 - `weazlfeed-podcast-search`
 - `weazlfeed-prune`
+- `weazlfeed-vault`
 
 They are installed to:
 
@@ -64,7 +66,8 @@ weazlfeed
 
 On first launch, WeazlFeed asks you to create a vault password. Later launches
 require that password before the TUI opens. The password is checked with bcrypt,
-and the SQLite database file is forced to `0600` permissions.
+the SQLite database file is forced to `0600` permissions, and feed/article
+payloads are encrypted at rest after unlock.
 
 Run setup again any time:
 
@@ -155,6 +158,12 @@ weazlfeed-prune -days 30
 By default pruning keeps unread items and podcast items with saved playback
 positions. Use `-keep-unread=false` or `-keep-playhead=false` to prune more
 aggressively.
+
+Force a vault unlock/encryption migration without refreshing feeds:
+
+```sh
+weazlfeed-vault
+```
 
 OPML files are ignored by Git so private or personally curated feed lists stay
 local.
@@ -250,6 +259,7 @@ go build ./cmd/weazlfeed-setup
 go build ./cmd/weazlfeed-refresh
 go build ./cmd/weazlfeed-podcast-search
 go build ./cmd/weazlfeed-prune
+go build ./cmd/weazlfeed-vault
 ```
 
 The codebase is intentionally modular. Keep files below 400 LOC unless there is

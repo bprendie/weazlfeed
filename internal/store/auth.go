@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/crypto/sha3"
 )
 
 func (s *Store) HasLock() (bool, error) {
@@ -19,8 +20,11 @@ func (s *Store) CreateLock(password string) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Exec(`INSERT INTO vault(id, password_hash) VALUES(1, ?)`, string(hash))
-	return err
+	if _, err = s.db.Exec(`INSERT INTO vault(id, password_hash) VALUES(1, ?)`, string(hash)); err != nil {
+		return err
+	}
+	s.unlockWith(password)
+	return s.EnsureEncrypted()
 }
 
 func (s *Store) Unlock(password string) error {
@@ -31,5 +35,12 @@ func (s *Store) Unlock(password string) error {
 	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)); err != nil {
 		return errors.New("bad vault password")
 	}
-	return nil
+	s.unlockWith(password)
+	return s.EnsureEncrypted()
+}
+
+func (s *Store) unlockWith(password string) {
+	sum := sha3.Sum256([]byte(password))
+	s.key = sum[:]
+	s.unlocked = true
 }

@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS feeds (
 	etag TEXT,
 	last_modified TEXT,
 	last_error TEXT,
-	last_status INTEGER NOT NULL DEFAULT 0
+	last_status INTEGER NOT NULL DEFAULT 0,
+	feed_key TEXT UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS items (
@@ -66,5 +67,7 @@ ALTER TABLE feeds ADD COLUMN etag TEXT;
 ALTER TABLE feeds ADD COLUMN last_modified TEXT;
 ALTER TABLE feeds ADD COLUMN last_error TEXT;
 ALTER TABLE feeds ADD COLUMN last_status INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE feeds ADD COLUMN feed_key TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_feeds_feed_key ON feeds(feed_key);
 ALTER TABLE folders ADD COLUMN collapsed INTEGER NOT NULL DEFAULT 0;
 `
