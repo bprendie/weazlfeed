@@ -138,6 +138,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case podcastSearchMsg:
+		if !m.podcastInput {
+			return m, nil
+		}
+		m.podcastSearching = false
 		m.err = errText(msg.err)
 		if msg.err == nil {
 			m.podcasts = msg.results
@@ -282,6 +286,7 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.podcasts = nil
 		m.podcastCursor = 0
 		m.podcastScroll = 0
+		m.podcastSearching = false
 		m.input.SetValue("")
 		m.input.Placeholder = "podcast search"
 		m.input.Prompt = "podcast> "

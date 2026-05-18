@@ -24,6 +24,7 @@ func (m Model) subscribePodcast() (tea.Model, tea.Cmd) {
 	m.podcasts = nil
 	m.podcastCursor = 0
 	m.podcastScroll = 0
+	m.podcastSearching = false
 	m.input.Blur()
 	m.input.SetValue("")
 	m.input.Prompt = "interrogate> "

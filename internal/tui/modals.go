@@ -87,7 +87,9 @@ func (m Model) renderPodcastModal(bodyHeight int) string {
 	resultHeight := max(1, contentHeight-len(lines))
 	start := clampInt(m.podcastScroll, 0, len(m.podcasts))
 	end := clampInt(start+resultHeight, start, len(m.podcasts))
-	if len(m.podcasts) == 0 {
+	if m.podcastSearching {
+		lines = append(lines, m.styles.status.Render(m.spinner.View()+" searching podcast directory"))
+	} else if len(m.podcasts) == 0 {
 		lines = append(lines, m.styles.help.Render("Search Apple Podcasts by title, network, or host."))
 	} else {
 		for i, result := range m.podcasts[start:end] {
