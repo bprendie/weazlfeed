@@ -75,6 +75,7 @@ type Model struct {
 	article          string
 	savedArticle     string
 	savedRawArticle  string
+	activeAIItem     store.Item
 	articleMode      articleMode
 	status           string
 	err              string

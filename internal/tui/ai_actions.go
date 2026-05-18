@@ -22,6 +22,9 @@ func (m *Model) showAIOutput(msg aiMsg) {
 		body += "**Q:** " + msg.question + "\n\n"
 	}
 	body += strings.TrimSpace(msg.text)
+	if msg.kind == "ask" && m.activeAIItem.ContentMarkdown != "" {
+		body += "\n\n---\n\n## Article Snapshot\n\n" + m.activeAIItem.ContentMarkdown
+	}
 	m.rawArticle = body
 	m.article = m.renderMarkdown(body)
 	m.stageScroll = 0
@@ -39,6 +42,11 @@ func (m *Model) showInterrogation(out store.AIOutput) {
 	m.article = m.renderMarkdown(body)
 	m.savedRawArticle = ""
 	m.savedArticle = ""
+	m.activeAIItem = store.Item{
+		ID:              out.ItemID,
+		Title:           firstText(out.ItemTitle, "saved interrogation"),
+		ContentMarkdown: out.ItemContent,
+	}
 	m.articleMode = articleAsk
 	m.status = "saved interrogation"
 }
@@ -64,6 +72,17 @@ func (m *Model) restoreArticle() {
 		m.savedArticle = ""
 	}
 	m.articleMode = articleNormal
+	m.activeAIItem = store.Item{}
 	m.stageScroll = 0
 	m.status = "article restored"
+}
+
+func (m Model) currentAIItem() (store.Item, bool) {
+	if m.articleMode == articleAsk && m.activeAIItem.ContentMarkdown != "" {
+		return m.activeAIItem, true
+	}
+	if len(m.items) == 0 || m.itemCursor < 0 || m.itemCursor >= len(m.items) {
+		return store.Item{}, false
+	}
+	return m.items[m.itemCursor], true
 }

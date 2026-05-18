@@ -34,14 +34,18 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if urlInput {
 				return m.addURL(question)
 			}
-			if question != "" && len(m.items) > 0 {
+			if question != "" {
+				item, ok := m.currentAIItem()
+				if !ok {
+					return m, nil
+				}
 				m.aiWorking = true
 				m.aiAction = "interrogating article"
 				m.aiStartedAt = time.Now()
-				m.aiReqIn = estimateTokens(m.items[m.itemCursor].ContentMarkdown) + estimateTokens(question)
+				m.aiReqIn = estimateTokens(item.ContentMarkdown) + estimateTokens(question)
 				m.aiReqOut = 0
 				m.status = "interrogating active article"
-				return m, tea.Batch(aiCmd(m.store, m.ai, "ask", m.items[m.itemCursor], question), m.spinner.Tick, aiTickCmd())
+				return m, tea.Batch(aiCmd(m.store, m.ai, "ask", item, question), m.spinner.Tick, aiTickCmd())
 			}
 			return m, nil
 		}

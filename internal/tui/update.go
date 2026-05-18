@@ -345,7 +345,7 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.input.Focus()
 		return m, nil
 	case "ctrl+a":
-		if m.aiEnabled && len(m.items) > 0 {
+		if m.aiEnabled && (len(m.items) > 0 || m.activeAIItem.ContentMarkdown != "") {
 			m.asking = true
 			m.input.EchoMode = textinput.EchoNormal
 			m.input.Focus()

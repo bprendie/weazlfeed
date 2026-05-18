@@ -331,6 +331,7 @@ func (m *Model) setArticle(text string) {
 	m.article = m.renderMarkdown(text)
 	m.savedRawArticle = ""
 	m.savedArticle = ""
+	m.activeAIItem = store.Item{}
 	m.articleMode = articleNormal
 }
 
@@ -339,6 +340,7 @@ func (m *Model) clearArticle() {
 	m.article = ""
 	m.savedRawArticle = ""
 	m.savedArticle = ""
+	m.activeAIItem = store.Item{}
 	m.articleMode = articleNormal
 }
 

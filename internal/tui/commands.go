@@ -200,6 +200,9 @@ func aiCmd(vault *store.Store, ai llm.Client, mode string, item store.Item, ques
 			}
 			item = full
 		}
+		if item.ID == 0 && item.GUID == "" {
+			item.GUID = "interrogation:" + item.Title
+		}
 		inTokens := estimateTokens(item.ContentMarkdown) + estimateTokens(question)
 		if mode == "triage" && item.ID != 0 {
 			if out, err := vault.AIOutput(item.ID, "triage"); err == nil && out.Response != "" {
