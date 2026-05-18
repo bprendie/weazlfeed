@@ -43,6 +43,7 @@ type Model struct {
 	feedScroll   int
 	itemScroll   int
 	stageScroll  int
+	rawArticle   string
 	article      string
 	status       string
 	err          string

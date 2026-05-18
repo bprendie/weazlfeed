@@ -21,7 +21,7 @@ func (m *Model) move(delta int) {
 			m.stageScroll = 0
 			m.items = nil
 			m.podcasts = nil
-			m.article = ""
+			m.setArticle("")
 		}
 	case focusItems:
 		m.itemCursor += delta
@@ -41,6 +41,7 @@ func (m *Model) retreat() {
 		m.focus--
 	}
 	m.status = "back"
+	m.rerenderArticle()
 	m.clamp()
 	m.ensureCursorVisible()
 }
@@ -288,7 +289,7 @@ func (m *Model) clampScrolls() {
 
 func (m *Model) renderArticle() {
 	if len(m.items) == 0 {
-		m.article = "No items for this feed. Press r to refresh."
+		m.setArticle("No items for this feed. Press r to refresh.")
 		return
 	}
 	item := m.items[m.itemCursor]
@@ -296,7 +297,18 @@ func (m *Model) renderArticle() {
 	if text == "" {
 		text = item.Link
 	}
-	m.article = text
+	m.setArticle(text)
+}
+
+func (m *Model) setArticle(text string) {
+	m.rawArticle = text
+	m.article = m.renderMarkdown(text)
+}
+
+func (m *Model) rerenderArticle() {
+	if m.rawArticle != "" {
+		m.article = m.renderMarkdown(m.rawArticle)
+	}
 }
 
 func errText(err error) string {

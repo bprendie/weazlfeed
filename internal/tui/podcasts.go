@@ -58,6 +58,6 @@ func (m Model) subscribePodcast() (tea.Model, tea.Cmd) {
 	m.podcasts = nil
 	m.itemCursor = 0
 	m.itemScroll = 0
-	m.article = fmt.Sprintf("# %s\n\n%s", result.Title, result.FeedURL)
+	m.setArticle(fmt.Sprintf("# %s\n\n%s", result.Title, result.FeedURL))
 	return m, loadFeedsCmd(m.store)
 }

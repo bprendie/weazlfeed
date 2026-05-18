@@ -118,7 +118,7 @@ func (m Model) renderStage(width, height int) string {
 	if m.asking || m.folderInput || m.podcastInput {
 		return truncate(m.input.View(), width)
 	}
-	lines := m.stageLines(width - 2)
+	lines := strings.Split(m.article, "\n")
 	lines = windowLines(lines, m.stageScroll, height-3)
 	for i := range lines {
 		lines[i] = truncate(lines[i], width-2)
@@ -257,26 +257,29 @@ func compactVisualizer(value string) string {
 	return " | " + value
 }
 
-func (m Model) stageLines(width int) []string {
-	width = max(20, width)
+func (m Model) stageLineCount() int {
 	if m.article == "" {
-		return []string{""}
+		return 1
 	}
-	renderer, err := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(width))
-	if err != nil {
-		return strings.Split(m.article, "\n")
-	}
-	rendered, err := renderer.Render(m.article)
-	if err != nil {
-		return strings.Split(m.article, "\n")
-	}
-	return strings.Split(strings.TrimRight(rendered, "\n"), "\n")
+	return len(strings.Split(m.article, "\n"))
 }
 
-func (m Model) stageLineCount() int {
+func (m Model) renderMarkdown(text string) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return ""
+	}
 	dims, _ := m.layout()
-	width := panelContentWidth(m.styles.panel, dims.right) - 2
-	return len(m.stageLines(width))
+	width := max(20, panelContentWidth(m.styles.panel, dims.right)-2)
+	renderer, err := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(width))
+	if err != nil {
+		return text
+	}
+	rendered, err := renderer.Render(text)
+	if err != nil {
+		return text
+	}
+	return strings.TrimRight(rendered, "\n")
 }
 
 func (m Model) visibleFeeds() []store.Feed {

@@ -16,6 +16,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.rerenderArticle()
 	case tea.KeyMsg:
 		return m.updateKey(msg)
 	case tea.MouseMsg:
@@ -45,13 +46,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case aiMsg:
 		m.err = errText(msg.err)
 		if msg.err == nil {
-			m.article = msg.text
+			m.setArticle(msg.text)
 			m.status = "local extraction complete"
 		}
 	case articleMsg:
 		m.err = errText(msg.err)
 		if msg.err == nil {
-			m.article = msg.text
+			m.setArticle(msg.text)
 			m.stageScroll = 0
 			m.status = "gopher target loaded"
 		}
@@ -62,7 +63,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.itemCursor = 0
 			m.itemScroll = 0
 			m.focus = focusItems
-			m.article = "Select a podcast result and press enter to subscribe."
+			m.setArticle("Select a podcast result and press enter to subscribe.")
 			m.status = "podcast search: " + intText(len(msg.results)) + " results"
 		}
 	case meterMsg:
@@ -87,6 +88,7 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "tab":
 		m.focus = (m.focus + 1) % 3
+		m.rerenderArticle()
 	case "esc":
 		m.retreat()
 	case "j", "down":
