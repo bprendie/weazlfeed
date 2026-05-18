@@ -2,6 +2,7 @@ package tui
 
 import (
 	"strings"
+	"time"
 
 	"github.com/bprendie/weazlfeed/internal/audio"
 	"github.com/bprendie/weazlfeed/internal/store"
@@ -40,8 +41,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
-		if m.refreshing || m.rendering {
+		if m.refreshing || m.rendering || m.aiWorking {
 			return m, cmd
+		}
+	case aiTickMsg:
+		if m.aiWorking {
+			return m, aiTickCmd()
 		}
 	case feedsMsg:
 		m.feeds, m.err = msg.feeds, errText(msg.err)
@@ -99,10 +104,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, loadFeedsCmd(m.store)
 		}
 	case aiMsg:
+		m.aiWorking = false
+		m.aiAction = ""
+		m.aiStartedAt = time.Time{}
 		m.err = errText(msg.err)
 		if msg.err == nil {
-			m.setArticle(msg.text)
-			m.status = "local extraction complete"
+			m.showAIOutput(msg)
 		}
 	case articleMsg:
 		m.rendering = false
@@ -207,6 +214,10 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		if m.playingID != 0 {
 			m.stopAudio()
+			return m, nil
+		}
+		if m.articleMode != articleNormal {
+			m.restoreArticle()
 			return m, nil
 		}
 		m.retreat()
@@ -321,8 +332,11 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "ctrl+t":
 		if m.aiEnabled && len(m.items) > 0 {
+			m.aiWorking = true
+			m.aiAction = "extracting critical points"
+			m.aiStartedAt = time.Now()
 			m.status = "extracting critical points"
-			return m, aiCmd(m.ai, "triage", m.items[m.itemCursor], "")
+			return m, tea.Batch(aiCmd(m.store, m.ai, "triage", m.items[m.itemCursor], ""), m.spinner.Tick, aiTickCmd())
 		}
 	}
 	return m, nil
@@ -356,8 +370,11 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m.addURL(question)
 			}
 			if question != "" && len(m.items) > 0 {
+				m.aiWorking = true
+				m.aiAction = "interrogating article"
+				m.aiStartedAt = time.Now()
 				m.status = "interrogating active article"
-				return m, aiCmd(m.ai, "ask", m.items[m.itemCursor], question)
+				return m, tea.Batch(aiCmd(m.store, m.ai, "ask", m.items[m.itemCursor], question), m.spinner.Tick, aiTickCmd())
 			}
 			return m, nil
 		}

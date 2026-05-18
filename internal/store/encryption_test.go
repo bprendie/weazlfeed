@@ -30,15 +30,21 @@ func TestCreateLockEncryptsExistingRows(t *testing.T) {
 	if err := vault.CreateLock("test-password"); err != nil {
 		t.Fatal(err)
 	}
+	if err := vault.SaveAIOutput(1, "triage", "prompt", "response"); err != nil {
+		t.Fatal(err)
+	}
 
-	var rawTitle, rawURL, rawItem string
+	var rawTitle, rawURL, rawItem, rawAI string
 	if err := vault.db.QueryRow(`SELECT title, url FROM feeds WHERE id = 1`).Scan(&rawTitle, &rawURL); err != nil {
 		t.Fatal(err)
 	}
 	if err := vault.db.QueryRow(`SELECT content_markdown FROM items WHERE id = 1`).Scan(&rawItem); err != nil {
 		t.Fatal(err)
 	}
-	for label, value := range map[string]string{"feed title": rawTitle, "feed url": rawURL, "item": rawItem} {
+	if err := vault.db.QueryRow(`SELECT response FROM ai_outputs WHERE item_id = 1`).Scan(&rawAI); err != nil {
+		t.Fatal(err)
+	}
+	for label, value := range map[string]string{"feed title": rawTitle, "feed url": rawURL, "item": rawItem, "ai": rawAI} {
 		if !strings.HasPrefix(value, encryptedPrefix) {
 			t.Fatalf("%s was not encrypted: %q", label, value)
 		}
@@ -57,5 +63,12 @@ func TestCreateLockEncryptsExistingRows(t *testing.T) {
 	}
 	if item.ContentMarkdown != "Secret" || item.EnclosureURL != "https://example.com/audio.mp3" {
 		t.Fatalf("decrypted item mismatch: %#v", item)
+	}
+	out, err := vault.AIOutput(1, "triage")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Response != "response" {
+		t.Fatalf("decrypted AI output = %q", out.Response)
 	}
 }

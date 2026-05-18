@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"time"
 
 	"github.com/bprendie/weazlfeed/internal/audio"
 	"github.com/bprendie/weazlfeed/internal/config"
@@ -29,6 +30,14 @@ const (
 	lockUnlock
 	lockCreate
 	lockConfirm
+)
+
+type articleMode int
+
+const (
+	articleNormal articleMode = iota
+	articleTriage
+	articleAsk
 )
 
 type Model struct {
@@ -61,6 +70,9 @@ type Model struct {
 	stageScroll      int
 	rawArticle       string
 	article          string
+	savedArticle     string
+	savedRawArticle  string
+	articleMode      articleMode
 	status           string
 	err              string
 	hideSludge       bool
@@ -85,6 +97,9 @@ type Model struct {
 	revealFolder     string
 	refreshing       bool
 	rendering        bool
+	aiWorking        bool
+	aiAction         string
+	aiStartedAt      time.Time
 	pickedFeedID     int64
 	lockMode         lockMode
 	pendingPass      string

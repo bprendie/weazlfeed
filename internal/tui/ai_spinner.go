@@ -1,0 +1,32 @@
+package tui
+
+import "time"
+
+var aiThinkingPhrases = []string{
+	"hacking_the_gibson",
+	"jacking_into_the_matrix",
+	"breaching_corporate_ice",
+	"overclocking_neural_link",
+	"tracing_the_uplink",
+	"decrypting_sector_7",
+	"sniffing_data_packets",
+	"bypassing_firewall_01",
+	"rerouting_the_mainframe",
+	"mapping_the_grid",
+	"ghosting_the_network",
+	"prying_open_the_vault",
+	"optimizing_cyberdeck",
+	"wheezing_the_juice",
+	"chilling_the_tokens",
+	"taxing_the_gig",
+}
+
+func (m Model) aiWorkingText() string {
+	if len(aiThinkingPhrases) == 0 || m.aiStartedAt.IsZero() {
+		return firstText(m.aiAction, "local_model_working")
+	}
+	phase := min(3, int(time.Since(m.aiStartedAt)/(20*time.Second)))
+	start := int((m.aiStartedAt.UnixNano() / int64(time.Millisecond)) % int64(len(aiThinkingPhrases)))
+	phrase := aiThinkingPhrases[(start+phase)%len(aiThinkingPhrases)]
+	return firstText(m.aiAction, "ai") + " | " + phrase
+}

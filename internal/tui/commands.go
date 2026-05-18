@@ -181,19 +181,45 @@ func looksAudioURL(raw string) bool {
 		strings.HasSuffix(raw, ".opus") || strings.HasSuffix(raw, ".wav")
 }
 
-func aiCmd(ai llm.Client, mode string, item store.Item, question string) tea.Cmd {
+const aiMaxChars = 12000
+
+func aiCmd(vault *store.Store, ai llm.Client, mode string, item store.Item, question string) tea.Cmd {
 	return func() tea.Msg {
-		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		if item.ContentMarkdown == "" && item.ID != 0 {
+			full, err := vault.Item(item.ID)
+			if err != nil {
+				return aiMsg{itemID: item.ID, kind: mode, question: question, err: err}
+			}
+			item = full
+		}
+		if mode == "triage" && item.ID != 0 {
+			if out, err := vault.AIOutput(item.ID, "triage"); err == nil && out.Response != "" {
+				return aiMsg{itemID: item.ID, kind: mode, text: out.Response, cached: true}
+			}
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 		defer cancel()
+		body := trimAIInput(item.ContentMarkdown)
 		var text string
 		var err error
 		if mode == "ask" {
-			text, err = ai.Ask(ctx, item.ContentMarkdown, question)
+			text, err = ai.Ask(ctx, body, question)
 		} else {
-			text, err = ai.Triage(ctx, item.ContentMarkdown)
+			text, err = ai.Triage(ctx, body)
 		}
-		return aiMsg{text: text, err: err}
+		if err == nil && item.ID != 0 && text != "" {
+			_ = vault.SaveAIOutput(item.ID, mode, question, text)
+		}
+		return aiMsg{itemID: item.ID, kind: mode, question: question, text: text, err: err}
 	}
+}
+
+func trimAIInput(markdown string) string {
+	markdown = strings.TrimSpace(markdown)
+	if len(markdown) <= aiMaxChars {
+		return markdown
+	}
+	return markdown[:aiMaxChars] + "\n\n[TRUNCATED FOR LOCAL MODEL SPEED]"
 }
 
 func podcastSearchCmd(query string) tea.Cmd {
@@ -309,6 +335,12 @@ func playheadTickCmd() tea.Cmd {
 func audioTickCmd() tea.Cmd {
 	return tea.Tick(time.Second/30, func(time.Time) tea.Msg {
 		return audioTickMsg{}
+	})
+}
+
+func aiTickCmd() tea.Cmd {
+	return tea.Tick(time.Second/10, func(time.Time) tea.Msg {
+		return aiTickMsg{}
 	})
 }
 

@@ -39,12 +39,24 @@ func (c Client) Available(ctx context.Context) bool {
 }
 
 func (c Client) Triage(ctx context.Context, markdown string) (string, error) {
-	prompt := "Extract the three most critical technical points. No filler.\n\n" + markdown
+	prompt := `Extract the three most critical points from this feed item.
+Return exactly three bullets.
+Each bullet must be one sentence.
+Focus on technical, factual, or decision-relevant signal.
+No intro. No outro.
+
+ITEM:
+` + markdown
 	return c.Complete(ctx, prompt)
 }
 
 func (c Client) Ask(ctx context.Context, markdown, question string) (string, error) {
-	prompt := "Answer using only this feed item. Be concise.\n\nARTICLE:\n" + markdown + "\n\nQUESTION:\n" + question
+	prompt := `Answer using only this feed item.
+Be concise.
+If the item does not contain enough information, say so.
+
+ITEM:
+` + markdown + "\n\nQUESTION:\n" + question
 	return c.Complete(ctx, prompt)
 }
 

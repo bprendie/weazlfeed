@@ -47,3 +47,12 @@ type BouncerRule struct {
 	ID     int64
 	Prompt string
 }
+
+type AIOutput struct {
+	ID        int64
+	ItemID    int64
+	Kind      string
+	Prompt    string
+	Response  string
+	CreatedAt time.Time
+}

@@ -131,8 +131,27 @@ func (m Model) renderStage(width, height int) string {
 	if m.asking || m.folderInput {
 		return truncate(m.input.View(), width)
 	}
+	if m.aiWorking {
+		return fitLines([]string{m.styles.status.Render(gradientStatus(m.spinner.View() + " " + m.aiWorkingText()))}, height-3)
+	}
 	if m.rendering {
 		return fitLines([]string{m.styles.status.Render(m.spinner.View() + " rendering reader")}, height-3)
+	}
+	if m.articleMode != articleNormal && len(m.article) > 0 {
+		mode := "AI"
+		if m.articleMode == articleTriage {
+			mode = "AI TRIAGE"
+		}
+		if m.articleMode == articleAsk {
+			mode = "INTERROGATION"
+		}
+		lines := []string{m.styles.badge.Render(mode + " | esc returns to article"), ""}
+		lines = append(lines, strings.Split(m.article, "\n")...)
+		lines = windowLines(lines, m.stageScroll, height-3)
+		for i := range lines {
+			lines[i] = truncate(lines[i], width-2)
+		}
+		return fitLines(lines, height-3)
 	}
 	lines := strings.Split(m.article, "\n")
 	lines = windowLines(lines, m.stageScroll, height-3)
@@ -156,6 +175,9 @@ func (m Model) footer() string {
 	}
 	if m.rendering {
 		audioState = m.spinner.View() + " rendering"
+	}
+	if m.aiWorking {
+		audioState = m.spinner.View() + " " + m.aiWorkingText()
 	}
 	picked := ""
 	if m.pickedFeedID != 0 {

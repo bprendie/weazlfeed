@@ -318,17 +318,65 @@ func (m *Model) showItemHint() {
 func (m *Model) setArticle(text string) {
 	m.rawArticle = text
 	m.article = m.renderMarkdown(text)
+	m.savedRawArticle = ""
+	m.savedArticle = ""
+	m.articleMode = articleNormal
 }
 
 func (m *Model) clearArticle() {
 	m.rawArticle = ""
 	m.article = ""
+	m.savedRawArticle = ""
+	m.savedArticle = ""
+	m.articleMode = articleNormal
 }
 
 func (m *Model) rerenderArticle() {
 	if m.rawArticle != "" {
 		m.article = m.renderMarkdown(m.rawArticle)
 	}
+	if m.savedRawArticle != "" {
+		m.savedArticle = m.renderMarkdown(m.savedRawArticle)
+	}
+}
+
+func (m *Model) showAIOutput(msg aiMsg) {
+	if m.articleMode == articleNormal {
+		m.savedRawArticle = m.rawArticle
+		m.savedArticle = m.article
+	}
+	title := "AI TRIAGE"
+	m.articleMode = articleTriage
+	if msg.kind == "ask" {
+		title = "INTERROGATION ROOM"
+		m.articleMode = articleAsk
+	}
+	body := "# " + title + "\n\n"
+	if msg.question != "" {
+		body += "**Q:** " + msg.question + "\n\n"
+	}
+	body += strings.TrimSpace(msg.text)
+	m.rawArticle = body
+	m.article = m.renderMarkdown(body)
+	m.stageScroll = 0
+	m.focus = focusArticle
+	if msg.cached {
+		m.status = "cached local extraction"
+	} else {
+		m.status = "local extraction complete"
+	}
+}
+
+func (m *Model) restoreArticle() {
+	if m.savedRawArticle != "" || m.savedArticle != "" {
+		m.rawArticle = m.savedRawArticle
+		m.article = m.savedArticle
+		m.savedRawArticle = ""
+		m.savedArticle = ""
+	}
+	m.articleMode = articleNormal
+	m.stageScroll = 0
+	m.status = "article restored"
 }
 
 func errText(err error) string {

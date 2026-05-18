@@ -10,6 +10,9 @@ func (s *Store) EnsureEncrypted() error {
 	if err := s.encryptItems(); err != nil {
 		return err
 	}
+	if err := s.encryptAIOutputs(); err != nil {
+		return err
+	}
 	return s.encryptRules()
 }
 
@@ -151,6 +154,43 @@ func (s *Store) encryptRules() error {
 			return err
 		}
 		if _, err := s.db.Exec(`UPDATE bouncer_rules SET rule_prompt = ? WHERE id = ?`, prompt, rule.id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Store) encryptAIOutputs() error {
+	rows, err := s.db.Query(`SELECT id, prompt, response FROM ai_outputs`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	type aiRow struct {
+		id               int64
+		prompt, response string
+	}
+	var outputs []aiRow
+	for rows.Next() {
+		var out aiRow
+		if err := rows.Scan(&out.id, &out.prompt, &out.response); err != nil {
+			return err
+		}
+		outputs = append(outputs, out)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, out := range outputs {
+		prompt, err := s.encryptText(s.decryptText(out.prompt))
+		if err != nil {
+			return err
+		}
+		response, err := s.encryptText(s.decryptText(out.response))
+		if err != nil {
+			return err
+		}
+		if _, err := s.db.Exec(`UPDATE ai_outputs SET prompt = ?, response = ? WHERE id = ?`, prompt, response, out.id); err != nil {
 			return err
 		}
 	}

@@ -49,6 +49,15 @@ CREATE TABLE IF NOT EXISTS bouncer_rules (
 	rule_prompt TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS ai_outputs (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+	kind TEXT NOT NULL,
+	prompt TEXT NOT NULL,
+	response TEXT NOT NULL,
+	created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS vault (
 	id INTEGER PRIMARY KEY CHECK (id = 1),
 	password_hash TEXT NOT NULL,
@@ -57,6 +66,7 @@ CREATE TABLE IF NOT EXISTS vault (
 
 CREATE INDEX IF NOT EXISTS idx_items_feed_date ON items(feed_id, published_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_items_unread ON items(read_status);
+CREATE INDEX IF NOT EXISTS idx_ai_outputs_item_kind ON ai_outputs(item_id, kind, id DESC);
 
 ALTER TABLE items ADD COLUMN playhead_seconds INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE items ADD COLUMN duration_seconds INTEGER NOT NULL DEFAULT 0;

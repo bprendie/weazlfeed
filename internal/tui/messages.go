@@ -45,13 +45,19 @@ type deleteFeedMsg struct {
 }
 
 type aiMsg struct {
-	text string
-	err  error
+	itemID   int64
+	kind     string
+	question string
+	text     string
+	cached   bool
+	err      error
 }
 
 type playheadTickMsg struct{}
 
 type audioTickMsg struct{}
+
+type aiTickMsg struct{}
 
 type articleMsg struct {
 	text string
