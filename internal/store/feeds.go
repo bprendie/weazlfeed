@@ -5,14 +5,19 @@ import (
 	"time"
 )
 
-func (s *Store) UpsertFeed(title, url, feedType, category string) (int64, error) {
-	if category == "" {
-		category = "GENERAL"
+func (s *Store) UpsertFeed(title, url, feedType, section, folder, category string) (int64, error) {
+	if section == "" {
+		section = sectionFromType(feedType)
 	}
+	if folder == "" {
+		folder = folderFromCategory(category)
+	}
+	category = firstText(category, folder, "General")
 	res, err := s.db.Exec(`
-		INSERT INTO feeds(title, url, type, category) VALUES(?, ?, ?, ?)
-		ON CONFLICT(url) DO UPDATE SET title=excluded.title, type=excluded.type, category=excluded.category
-	`, title, url, feedType, category)
+		INSERT INTO feeds(title, url, type, section, folder, category) VALUES(?, ?, ?, ?, ?, ?)
+		ON CONFLICT(url) DO UPDATE SET title=excluded.title, type=excluded.type,
+			section=excluded.section, folder=excluded.folder, category=excluded.category
+	`, title, url, feedType, section, folder, category)
 	if err != nil {
 		return 0, err
 	}
@@ -26,12 +31,14 @@ func (s *Store) UpsertFeed(title, url, feedType, category string) (int64, error)
 
 func (s *Store) Feeds() ([]Feed, error) {
 	rows, err := s.db.Query(`
-		SELECT f.id, f.title, f.url, f.type, f.category, f.last_fetched,
+		SELECT f.id, f.title, f.url, f.type, f.section, f.folder, f.category, f.last_fetched,
 			COUNT(CASE WHEN i.read_status = 0 THEN 1 END) AS unread
 		FROM feeds f
 		LEFT JOIN items i ON i.feed_id = f.id
 		GROUP BY f.id
-		ORDER BY lower(f.category), lower(f.title)
+		ORDER BY
+			CASE f.section WHEN 'News' THEN 0 WHEN 'Podcasts' THEN 1 WHEN 'Gopher' THEN 2 ELSE 3 END,
+			lower(f.folder), lower(f.title)
 	`)
 	if err != nil {
 		return nil, err
@@ -41,13 +48,48 @@ func (s *Store) Feeds() ([]Feed, error) {
 	for rows.Next() {
 		var f Feed
 		var fetched sql.NullString
-		if err := rows.Scan(&f.ID, &f.Title, &f.URL, &f.Type, &f.Category, &fetched, &f.Unread); err != nil {
+		if err := rows.Scan(&f.ID, &f.Title, &f.URL, &f.Type, &f.Section, &f.Folder, &f.Category, &fetched, &f.Unread); err != nil {
 			return nil, err
 		}
 		f.LastFetched = parseTime(fetched)
 		feeds = append(feeds, f)
 	}
 	return feeds, rows.Err()
+}
+
+func sectionFromType(feedType string) string {
+	if feedType == "gopher" {
+		return "Gopher"
+	}
+	return "News"
+}
+
+func folderFromCategory(category string) string {
+	switch category {
+	case "", "GENERAL":
+		return "General"
+	case "TECH":
+		return "Tech"
+	case "WORLD":
+		return "World"
+	case "SPORTS":
+		return "Sports"
+	case "MUSIC":
+		return "Music"
+	case "GOPHER":
+		return "Directory"
+	default:
+		return category
+	}
+}
+
+func firstText(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func (s *Store) MarkFetched(feedID int64, when time.Time) error {

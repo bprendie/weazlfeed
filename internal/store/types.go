@@ -7,6 +7,8 @@ type Feed struct {
 	Title       string
 	URL         string
 	Type        string
+	Section     string
+	Folder      string
 	Category    string
 	LastFetched time.Time
 	Unread      int

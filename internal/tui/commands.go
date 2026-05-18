@@ -26,7 +26,7 @@ func seedFeedsCmd(vault *store.Store, seeds []config.SeedFeed) tea.Cmd {
 			if feed.IsGopher(seed.URL) {
 				feedType = "gopher"
 			}
-			if _, err := vault.UpsertFeed(title, seed.URL, feedType, seed.Category); err != nil {
+			if _, err := vault.UpsertFeed(title, seed.URL, feedType, seed.Section, seed.Folder, seed.Category); err != nil {
 				return feedsMsg{err: err}
 			}
 		}
@@ -70,7 +70,7 @@ func refreshCmd(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Cmd {
 				return fetchMsg{added: added, err: err}
 			}
 			title := firstText(parsed.Title, src.Title, src.URL)
-			feedID, err := vault.UpsertFeed(title, src.URL, parsed.Type, src.Category)
+			feedID, err := vault.UpsertFeed(title, src.URL, parsed.Type, src.Section, src.Folder, src.Category)
 			if err != nil {
 				return fetchMsg{added: added, err: err}
 			}

@@ -35,6 +35,8 @@ type UI struct {
 }
 
 type SeedFeed struct {
+	Section  string `json:"section,omitempty"`
+	Folder   string `json:"folder,omitempty"`
 	Category string `json:"category,omitempty"`
 	Title    string `json:"title"`
 	URL      string `json:"url"`

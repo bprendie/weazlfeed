@@ -16,9 +16,9 @@ func (m Model) View() string {
 	contentWidth := max(20, m.width)
 	header := m.header(contentWidth)
 	body := lipgloss.JoinHorizontal(lipgloss.Top,
-		m.panel("INDEX", m.renderFeeds(dims.left, bodyHeight), dims.left, bodyHeight, m.focus == focusFeeds),
-		m.panel("STREAM", m.renderItems(dims.center, bodyHeight), dims.center, bodyHeight, m.focus == focusItems),
-		m.panel("STAGE", m.renderStage(dims.right, bodyHeight), dims.right, bodyHeight, m.focus == focusArticle),
+		m.panel("SOURCES", m.renderFeeds(dims.left, bodyHeight), dims.left, bodyHeight, m.focus == focusFeeds),
+		m.panel("ITEMS", m.renderItems(dims.center, bodyHeight), dims.center, bodyHeight, m.focus == focusItems),
+		m.panel("READER", m.renderStage(dims.right, bodyHeight), dims.right, bodyHeight, m.focus == focusArticle),
 	)
 	footer := m.footer()
 	return m.styles.frame.Width(m.width).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
@@ -36,7 +36,7 @@ func (m Model) panel(title, body string, width, height int, active bool) string 
 }
 
 func (m Model) header(width int) string {
-	if m.height < 30 {
+	if width < maxLineWidth(logo) || m.height < 18 {
 		return m.styles.header.Render("////// WeazlFeed //////")
 	}
 	return renderLogo(logo, width)
@@ -49,11 +49,13 @@ func (m Model) renderFeeds(width, height int) string {
 	}
 	var lines []string
 	for i, feed := range m.visibleFeeds() {
-		category := strings.ToUpper(firstText(feed.Category, "GENERAL"))
-		currentCategory := previousCategory(m.feeds, m.feedScroll+i)
-		if category != currentCategory {
-			lines = append(lines, m.styles.help.Render(":: "+category+" ::"))
-			currentCategory = category
+		section := firstText(feed.Section, sectionFromFeed(feed))
+		folder := firstText(feed.Folder, folderFromFeed(feed))
+		if section != previousSection(m.feeds, m.feedScroll+i) {
+			lines = append(lines, m.styles.status.Render(":: "+section+" ::"))
+		}
+		if folder != previousFolder(m.feeds, m.feedScroll+i) {
+			lines = append(lines, m.styles.help.Render("  ["+folder+"]"))
 		}
 		prefix := "  "
 		if feed.Type == "gopher" {
@@ -304,9 +306,43 @@ func clampInt(value, low, high int) int {
 	return value
 }
 
-func previousCategory(feeds []store.Feed, index int) string {
+func previousSection(feeds []store.Feed, index int) string {
 	if index <= 0 || index > len(feeds)-1 {
 		return ""
 	}
-	return strings.ToUpper(firstText(feeds[index-1].Category, "GENERAL"))
+	return firstText(feeds[index-1].Section, sectionFromFeed(feeds[index-1]))
+}
+
+func previousFolder(feeds []store.Feed, index int) string {
+	if index <= 0 || index > len(feeds)-1 {
+		return ""
+	}
+	prev := feeds[index-1]
+	current := feeds[index]
+	if previousSection(feeds, index) != firstText(current.Section, sectionFromFeed(current)) {
+		return ""
+	}
+	return firstText(prev.Folder, folderFromFeed(prev))
+}
+
+func sectionFromFeed(feed store.Feed) string {
+	if feed.Type == "gopher" {
+		return "Gopher"
+	}
+	return "News"
+}
+
+func folderFromFeed(feed store.Feed) string {
+	if feed.Folder != "" {
+		return feed.Folder
+	}
+	return titleCase(firstText(feed.Category, "General"))
+}
+
+func titleCase(value string) string {
+	value = strings.ToLower(value)
+	if value == "" {
+		return ""
+	}
+	return strings.ToUpper(value[:1]) + value[1:]
 }
