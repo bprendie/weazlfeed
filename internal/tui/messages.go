@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"github.com/bprendie/weazlfeed/internal/audio"
 	"github.com/bprendie/weazlfeed/internal/podcast"
 	"github.com/bprendie/weazlfeed/internal/store"
 )
@@ -44,9 +43,9 @@ type aiMsg struct {
 	err  error
 }
 
-type meterMsg audio.Sample
-
 type playheadTickMsg struct{}
+
+type audioTickMsg struct{}
 
 type articleMsg struct {
 	text string

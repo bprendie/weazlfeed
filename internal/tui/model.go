@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/harmonica"
 )
 
 type focus int
@@ -67,8 +68,12 @@ type Model struct {
 	urlInput     bool
 	helpOpen     bool
 	paused       bool
-	bars         []float64
+	energy       audio.Sample
+	visualizer   Visualizer
 	playingID    int64
+	playingURL   string
+	playingTitle string
+	playingTotal int
 	refreshing   bool
 	rendering    bool
 	pickedFeedID int64
@@ -107,6 +112,7 @@ func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
 		status:     "r refresh source | R refresh all | space pick/drop | n folder",
 		aiEnabled:  llm.New(cfg.Active()).Available(context.Background()),
 		lockMode:   mode,
+		visualizer: NewVisualizer(harmonica.FPS(30)),
 	}
 }
 

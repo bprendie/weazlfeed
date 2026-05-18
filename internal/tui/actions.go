@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bprendie/weazlfeed/internal/audio"
 	"github.com/bprendie/weazlfeed/internal/store"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -208,20 +207,7 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 		return m, tea.Batch(gopherPageCmd(item.Link), m.spinner.Tick)
 	}
 	if item.EnclosureURL != "" && strings.HasPrefix(item.EnclosureType, "audio/") {
-		m.stopAudio()
-		if err := m.player.Play(item.EnclosureURL, item.PlayheadSeconds); err != nil {
-			m.err = err.Error()
-			return m, nil
-		}
-		m.playingID = item.ID
-		m.paused = false
-		m.status = "playing " + item.Title
-		tick := playheadTickCmd()
-		if meter, err := audio.StartMeter(item.EnclosureURL); err == nil {
-			m.meter = meter
-			return m, tea.Batch(meterCmd(meter.Samples()), tick)
-		}
-		return m, tick
+		return m.playAudio(item)
 	}
 	m.focus = focusArticle
 	m.stageScroll = 0
@@ -229,25 +215,6 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	m.clearArticle()
 	m.status = m.spinner.View() + " rendering reader"
 	return m, tea.Batch(renderReaderCmd(m.store, item, m.readerWidth()), m.spinner.Tick)
-}
-
-func (m *Model) stopAudio() {
-	m.savePlayhead()
-	m.player.Stop()
-	if m.meter != nil {
-		m.meter.Stop()
-		m.meter = nil
-	}
-	m.playingID = 0
-	m.paused = false
-	m.bars = nil
-}
-
-func (m *Model) savePlayhead() {
-	if m.playingID == 0 {
-		return
-	}
-	_ = m.store.SetPlayhead(m.playingID, m.player.Position())
 }
 
 func (m *Model) clamp() {

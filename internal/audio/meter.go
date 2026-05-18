@@ -6,13 +6,15 @@ import (
 	"io"
 	"math"
 	"os/exec"
+	"strconv"
 	"sync"
 )
 
 type Sample struct {
-	Level float64
-	Bands []float64
-	Live  bool
+	Level     float64
+	Transient float64
+	Bands     []float64
+	Live      bool
 }
 
 type Meter struct {
@@ -22,12 +24,17 @@ type Meter struct {
 	mu   sync.Mutex
 }
 
-func StartMeter(url string) (*Meter, error) {
+func StartMeter(url string, offsetSeconds int) (*Meter, error) {
 	bin, err := exec.LookPath("ffmpeg")
 	if err != nil {
 		return nil, errors.New("ffmpeg not found")
 	}
-	cmd := exec.Command(bin, "-nostdin", "-v", "error", "-i", url, "-vn", "-f", "s16le", "-ac", "1", "-ar", "44100", "pipe:1")
+	args := []string{"-nostdin", "-v", "error"}
+	if offsetSeconds > 0 {
+		args = append(args, "-ss", strconv.Itoa(offsetSeconds))
+	}
+	args = append(args, "-i", url, "-vn", "-f", "s16le", "-ac", "1", "-ar", "44100", "pipe:1")
+	cmd := exec.Command(bin, args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -62,13 +69,22 @@ func (m *Meter) read(r io.Reader) {
 	defer close(m.out)
 	analyzer := NewSpectrumAnalyzer(44100, 24, 20, 18000)
 	buf := make([]byte, 4096)
+	previous := 0.0
 	for {
 		n, err := io.ReadFull(r, buf)
 		if err != nil {
 			return
 		}
+		level := rms(buf[:n])
+		sample := Sample{
+			Level:     level,
+			Transient: math.Max(0, level-previous),
+			Bands:     analyzer.Bands(buf[:n]),
+			Live:      true,
+		}
+		previous = level*0.72 + previous*0.28
 		select {
-		case m.out <- Sample{Level: rms(buf[:n]), Bands: analyzer.Bands(buf[:n]), Live: true}:
+		case m.out <- sample:
 		default:
 		}
 	}

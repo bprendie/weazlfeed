@@ -53,6 +53,7 @@ type rssItem struct {
 	Date        string       `xml:"date"`
 	Description string       `xml:"description"`
 	Content     string       `xml:"encoded"`
+	Duration    string       `xml:"duration"`
 	Enclosure   rssEnclosure `xml:"enclosure"`
 }
 
@@ -78,6 +79,7 @@ func parseRSS(body []byte) (Feed, error) {
 			ContentMarkdown: HTMLToMarkdown(html),
 			EnclosureURL:    strings.TrimSpace(src.Enclosure.URL),
 			EnclosureType:   strings.TrimSpace(src.Enclosure.Type),
+			DurationSeconds: parseDuration(src.Duration),
 		}
 		f.Items = append(f.Items, item)
 	}
@@ -151,6 +153,26 @@ func parseDate(value string) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+func parseDuration(value string) int {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	parts := strings.Split(value, ":")
+	total := 0
+	for _, part := range parts {
+		n := 0
+		for _, r := range strings.TrimSpace(part) {
+			if r < '0' || r > '9' {
+				return 0
+			}
+			n = n*10 + int(r-'0')
+		}
+		total = total*60 + n
+	}
+	return total
 }
 
 func firstNonEmpty(values ...string) string {

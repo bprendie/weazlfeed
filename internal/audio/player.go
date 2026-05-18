@@ -57,6 +57,23 @@ func (p *Player) Play(url string, offsetSeconds int) error {
 	return nil
 }
 
+func (p *Player) Seek(deltaSeconds int) error {
+	p.mu.Lock()
+	url := ""
+	if p.cmd != nil && len(p.cmd.Args) > 0 {
+		url = p.cmd.Args[len(p.cmd.Args)-1]
+	}
+	next := p.positionLocked() + deltaSeconds
+	p.mu.Unlock()
+	if url == "" {
+		return nil
+	}
+	if next < 0 {
+		next = 0
+	}
+	return p.Play(url, next)
+}
+
 func (p *Player) TogglePause() error {
 	p.mu.Lock()
 	cmd := p.cmd
@@ -99,6 +116,10 @@ func (p *Player) Stop() {
 func (p *Player) Position() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	return p.positionLocked()
+}
+
+func (p *Player) positionLocked() int {
 	if p.cmd == nil || p.startedAt.IsZero() {
 		return p.offset
 	}

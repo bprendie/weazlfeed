@@ -21,4 +21,5 @@ type Item struct {
 	ContentMarkdown string
 	EnclosureURL    string
 	EnclosureType   string
+	DurationSeconds int
 }

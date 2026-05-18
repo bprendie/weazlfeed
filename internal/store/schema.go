@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS items (
 	sludge_flag INTEGER NOT NULL DEFAULT 0,
 	sludge_checked INTEGER NOT NULL DEFAULT 0,
 	playhead_seconds INTEGER NOT NULL DEFAULT 0,
+	duration_seconds INTEGER NOT NULL DEFAULT 0,
 	UNIQUE(feed_id, guid)
 );
 
@@ -57,6 +58,7 @@ CREATE INDEX IF NOT EXISTS idx_items_feed_date ON items(feed_id, published_at DE
 CREATE INDEX IF NOT EXISTS idx_items_unread ON items(read_status);
 
 ALTER TABLE items ADD COLUMN playhead_seconds INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE items ADD COLUMN duration_seconds INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE feeds ADD COLUMN category TEXT NOT NULL DEFAULT 'GENERAL';
 ALTER TABLE feeds ADD COLUMN section TEXT NOT NULL DEFAULT 'News';
 ALTER TABLE feeds ADD COLUMN folder TEXT NOT NULL DEFAULT 'General';

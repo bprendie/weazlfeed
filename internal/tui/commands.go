@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/bprendie/weazlfeed/internal/app"
-	"github.com/bprendie/weazlfeed/internal/audio"
 	"github.com/bprendie/weazlfeed/internal/config"
 	"github.com/bprendie/weazlfeed/internal/feed"
 	"github.com/bprendie/weazlfeed/internal/llm"
@@ -143,6 +142,7 @@ func addFeedCmd(vault *store.Store, rawURL, section, folder string) tea.Cmd {
 				ContentMarkdown: parsedItem.ContentMarkdown,
 				EnclosureURL:    parsedItem.EnclosureURL,
 				EnclosureType:   parsedItem.EnclosureType,
+				DurationSeconds: parsedItem.DurationSeconds,
 				SludgeChecked:   true,
 			}
 			ok, err := vault.UpsertItem(item)
@@ -294,19 +294,15 @@ func renderReaderCmd(vault *store.Store, item store.Item, width int) tea.Cmd {
 	}
 }
 
-func meterCmd(ch <-chan audio.Sample) tea.Cmd {
-	return func() tea.Msg {
-		sample, ok := <-ch
-		if !ok {
-			return meterMsg{}
-		}
-		return meterMsg(sample)
-	}
-}
-
 func playheadTickCmd() tea.Cmd {
 	return tea.Tick(5*time.Second, func(time.Time) tea.Msg {
 		return playheadTickMsg{}
+	})
+}
+
+func audioTickCmd() tea.Cmd {
+	return tea.Tick(time.Second/30, func(time.Time) tea.Msg {
+		return audioTickMsg{}
 	})
 }
 

@@ -86,6 +86,7 @@ func refreshOne(ctx context.Context, vault *store.Store, client feed.Client, src
 			ContentMarkdown: parsedItem.ContentMarkdown,
 			EnclosureURL:    parsedItem.EnclosureURL,
 			EnclosureType:   parsedItem.EnclosureType,
+			DurationSeconds: parsedItem.DurationSeconds,
 		}
 		if useBouncer {
 			flagged, err := ai.FlagSludge(ctx, item.ContentMarkdown, rules)

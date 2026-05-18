@@ -24,6 +24,9 @@ func (m Model) View() string {
 		m.panel("ITEMS", m.renderItems(dims.center, bodyHeight), dims.center, bodyHeight, m.focus == focusItems),
 		m.panel("READER", m.renderStage(dims.right, bodyHeight), dims.right, bodyHeight, m.focus == focusArticle),
 	)
+	if m.playingID != 0 {
+		body = m.renderAudioModal(bodyHeight)
+	}
 	if m.urlInput {
 		body = m.renderURLModal(bodyHeight)
 	}
@@ -143,7 +146,7 @@ func (m Model) footer() string {
 	}
 	audioState := "audio idle"
 	if m.player.Active() {
-		audioState = "audio live"
+		audioState = audioPosition(m.player.Position(), m.playingTotal)
 	}
 	if m.refreshing {
 		audioState = m.spinner.View() + " refreshing"
@@ -157,7 +160,7 @@ func (m Model) footer() string {
 	}
 	parts := []string{
 		m.styles.help.Render(truncate("[j/k] nav [enter] open [esc/left] back [a] add [r/R] refresh [ctrl+k] keys [q] quit", max(10, m.width))),
-		m.styles.status.Render(ai + " | " + audioState + picked + compactVisualizer(m.visualizer())),
+		m.styles.status.Render(ai + " | " + audioState + picked),
 	}
 	if m.err != "" {
 		parts = append(parts, m.styles.error.Render(m.err))
@@ -165,25 +168,6 @@ func (m Model) footer() string {
 		parts = append(parts, m.styles.help.Render(m.status))
 	}
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
-}
-
-func (m Model) visualizer() string {
-	if len(m.bars) == 0 {
-		return ""
-	}
-	blocks := []string{" ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"}
-	var b strings.Builder
-	for _, value := range m.bars {
-		idx := int(value * float64(len(blocks)-1))
-		if idx < 0 {
-			idx = 0
-		}
-		if idx >= len(blocks) {
-			idx = len(blocks) - 1
-		}
-		b.WriteString(blocks[idx])
-	}
-	return m.styles.status.Render(b.String())
 }
 
 func badges(item store.Item) string {
@@ -270,13 +254,6 @@ func (m Model) layoutWidths(total int) (left, center, right int) {
 
 func panelContentWidth(style lipgloss.Style, outerW int) int {
 	return max(1, outerW-style.GetHorizontalFrameSize())
-}
-
-func compactVisualizer(value string) string {
-	if value == "" {
-		return ""
-	}
-	return " | " + value
 }
 
 func (m Model) stageLineCount() int {

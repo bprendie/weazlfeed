@@ -144,19 +144,38 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setArticle("Select a podcast result and press enter to subscribe.")
 			m.status = "podcast search: " + intText(len(msg.results)) + " results"
 		}
-	case meterMsg:
-		sample := audio.Sample(msg)
-		m.bars = sample.Bands
-		if m.meter != nil {
-			return m, meterCmd(m.meter.Samples())
-		}
 	case playheadTickMsg:
 		if m.playingID != 0 {
 			m.savePlayhead()
 			return m, playheadTickCmd()
 		}
+	case audioTickMsg:
+		m.drainMeter()
+		m.visualizer.Step(m.player.Active() && !m.paused, m.energy)
+		if m.playingID != 0 {
+			return m, audioTickCmd()
+		}
 	}
 	return m, nil
+}
+
+func (m *Model) drainMeter() {
+	if m.meter == nil {
+		m.energy = audio.Sample{}
+		return
+	}
+	for {
+		select {
+		case sample, ok := <-m.meter.Samples():
+			if !ok {
+				m.meter = nil
+				return
+			}
+			m.energy = sample
+		default:
+			return
+		}
+	}
 }
 
 func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -216,11 +235,24 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		if m.paused {
 			_ = m.player.Resume()
+			if m.playingURL != "" {
+				if meter, err := audio.StartMeter(m.playingURL, m.player.Position()); err == nil {
+					m.meter = meter
+				}
+			}
 		} else {
 			_ = m.player.TogglePause()
+			if m.meter != nil {
+				m.meter.Stop()
+				m.meter = nil
+			}
 		}
 		m.paused = !m.paused
 		m.savePlayhead()
+	case ",", "<":
+		m.seekAudio(-10)
+	case ".", ">":
+		m.seekAudio(30)
 	case "s":
 		m.stopAudio()
 	case "n":

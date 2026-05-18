@@ -40,6 +40,7 @@ type Item struct {
 	SludgeFlag      bool
 	SludgeChecked   bool
 	PlayheadSeconds int
+	DurationSeconds int
 }
 
 type BouncerRule struct {

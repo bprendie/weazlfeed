@@ -46,3 +46,28 @@ func (m Model) renderHelpModal(bodyHeight int) string {
 		Render(content)
 	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
 }
+
+func (m Model) renderAudioModal(bodyHeight int) string {
+	outerWidth := clampInt(m.width-8, 42, 96)
+	contentWidth := max(28, outerWidth-4)
+	title := truncate(firstText(m.playingTitle, "audio"), contentWidth)
+	state := "PLAYING"
+	if m.paused {
+		state = "PAUSED"
+	}
+	position := audioPosition(m.player.Position(), m.playingTotal)
+	lines := []string{
+		m.styles.status.Render(state + " " + position),
+		m.styles.item.Render(title),
+		"",
+		m.visualizer.View(),
+		"",
+		m.styles.help.Render("space pause/resume | , -10s | . +30s | s stop"),
+	}
+	modal := m.styles.panel.
+		Width(contentWidth).
+		BorderForeground(crushPink).
+		Padding(1, 2).
+		Render(strings.Join(lines, "\n"))
+	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
+}
