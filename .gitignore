@@ -3,4 +3,6 @@
 weazlfeed
 *.sqlite3
 *.db
+*.opml
+examples/*.xml
 dist/

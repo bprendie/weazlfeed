@@ -96,19 +96,14 @@ On first run, WeazlFeed seeds a starter deck:
 Feeds live in SQLite and are also seeded from config. The default config is
 created at first launch.
 
-An optional OPML file of known working feeds lives at:
-
-```text
-examples/known-working-feeds.opml
-```
-
-It is not imported by default.
-
-Import it with:
+Import OPML feed lists with:
 
 ```sh
-weazlfeed-import examples/known-working-feeds.opml
+weazlfeed-import feeds.opml
 ```
+
+OPML files are ignored by Git so private or personally curated feed lists stay
+local.
 
 ## Gopher
 
