@@ -37,7 +37,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.items, m.err = msg.items, errText(msg.err)
 		m.podcasts = nil
 		m.clamp()
-		m.renderArticle()
+		m.showItemHint()
 	case fetchMsg:
 		m.refreshing = false
 		m.err = errText(msg.err)

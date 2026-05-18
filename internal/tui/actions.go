@@ -27,9 +27,6 @@ func (m *Model) move(delta int) {
 		m.itemCursor += delta
 		m.clamp()
 		m.ensureCursorVisible()
-		if !m.podcastMode() {
-			m.renderArticle()
-		}
 	case focusArticle:
 		m.stageScroll += delta
 		m.clampScrolls()
@@ -117,9 +114,6 @@ func (m *Model) page(delta int) {
 	m.clamp()
 	m.ensureCursorVisible()
 	m.clampScrolls()
-	if m.focus == focusItems && !m.podcastMode() {
-		m.renderArticle()
-	}
 }
 
 func (m *Model) home() {
@@ -128,9 +122,6 @@ func (m *Model) home() {
 		m.feedCursor, m.feedScroll = 0, 0
 	case focusItems:
 		m.itemCursor, m.itemScroll = 0, 0
-		if !m.podcastMode() {
-			m.renderArticle()
-		}
 	case focusArticle:
 		m.stageScroll = 0
 	}
@@ -142,9 +133,6 @@ func (m *Model) end() {
 		m.feedCursor = len(m.feeds) - 1
 	case focusItems:
 		m.itemCursor = m.itemTargetCount() - 1
-		if !m.podcastMode() {
-			m.renderArticle()
-		}
 	case focusArticle:
 		m.stageScroll = m.stageLineCount()
 	}
@@ -174,11 +162,6 @@ func (m *Model) scrollFocused(delta int) {
 	m.clamp()
 	m.ensureCursorVisible()
 	m.clampScrolls()
-	if m.focus == focusItems {
-		if !m.podcastMode() {
-			m.renderArticle()
-		}
-	}
 }
 
 func (m Model) activate() (tea.Model, tea.Cmd) {
@@ -298,6 +281,14 @@ func (m *Model) renderArticle() {
 		text = item.Link
 	}
 	m.setArticle(text)
+}
+
+func (m *Model) showItemHint() {
+	if len(m.items) == 0 {
+		m.setArticle("No items for this feed. Press r to refresh.")
+		return
+	}
+	m.setArticle("Select an item and press enter to open it.")
 }
 
 func (m *Model) setArticle(text string) {
