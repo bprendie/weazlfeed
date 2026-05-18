@@ -20,6 +20,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.lockMode != lockOpen {
 		return m.updateLock(msg)
 	}
+	if m.helpOpen {
+		return m.updateHelp(msg)
+	}
 	if m.asking || m.folderInput || m.podcastInput || m.urlInput {
 		return m.updateInput(msg)
 	}
@@ -165,6 +168,9 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.focus = (m.focus + 1) % 3
 	case "esc":
 		m.retreat()
+	case "ctrl+k", "?", "f1":
+		m.helpOpen = true
+		m.status = "help"
 	case "j", "down":
 		m.move(1)
 	case "k", "up":

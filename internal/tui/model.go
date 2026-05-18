@@ -65,6 +65,7 @@ type Model struct {
 	folderInput  bool
 	podcastInput bool
 	urlInput     bool
+	helpOpen     bool
 	paused       bool
 	bars         []float64
 	playingID    int64

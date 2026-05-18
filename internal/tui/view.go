@@ -27,6 +27,9 @@ func (m Model) View() string {
 	if m.urlInput {
 		body = m.renderURLModal(bodyHeight)
 	}
+	if m.helpOpen {
+		body = m.renderHelpModal(bodyHeight)
+	}
 	footer := m.footer()
 	return m.styles.frame.Width(m.width).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
 }
@@ -133,29 +136,6 @@ func (m Model) renderStage(width, height int) string {
 	return fitLines(lines, height-3)
 }
 
-func (m Model) renderURLModal(bodyHeight int) string {
-	outerWidth := clampInt(m.width-8, 32, 88)
-	contentWidth := max(20, outerWidth-4)
-	input := m.input
-	input.Width = contentWidth
-	targetSection, targetFolder := m.selectedFolderTarget()
-	target := targetSection + "/" + targetFolder
-	lines := []string{
-		m.styles.status.Render("ADD SOURCE URL"),
-		m.styles.help.Render(truncate("target: "+target+" | gopher and audio feeds auto-route", contentWidth)),
-		"",
-		input.View(),
-		"",
-		m.styles.help.Render("enter add | esc cancel"),
-	}
-	modal := m.styles.panel.
-		Width(contentWidth).
-		BorderForeground(crushPink).
-		Padding(1, 2).
-		Render(strings.Join(lines, "\n"))
-	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
-}
-
 func (m Model) footer() string {
 	ai := "ai off"
 	if m.aiEnabled {
@@ -176,7 +156,7 @@ func (m Model) footer() string {
 		picked = " | picked source"
 	}
 	parts := []string{
-		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [enter] open/fold [esc/left] back [right] expand [space] pick/drop [a] add url [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
+		m.styles.help.Render(truncate("[j/k] nav [enter] open [esc/left] back [a] add [r/R] refresh [ctrl+k] keys [q] quit", max(10, m.width))),
 		m.styles.status.Render(ai + " | " + audioState + picked + compactVisualizer(m.visualizer())),
 	}
 	if m.err != "" {
