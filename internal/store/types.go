@@ -3,15 +3,25 @@ package store
 import "time"
 
 type Feed struct {
-	ID          int64
-	Title       string
-	URL         string
-	Type        string
-	Section     string
-	Folder      string
-	Category    string
-	LastFetched time.Time
-	Unread      int
+	ID           int64
+	Title        string
+	URL          string
+	Type         string
+	Section      string
+	Folder       string
+	Category     string
+	LastFetched  time.Time
+	ETag         string
+	LastModified string
+	LastError    string
+	LastStatus   int
+	Unread       int
+}
+
+type Folder struct {
+	ID      int64
+	Section string
+	Name    string
 }
 
 type Item struct {

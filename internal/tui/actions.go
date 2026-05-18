@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bprendie/weazlfeed/internal/audio"
+	"github.com/bprendie/weazlfeed/internal/store"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -30,6 +31,63 @@ func (m *Model) move(delta int) {
 		m.stageScroll += delta
 		m.clampScrolls()
 	}
+}
+
+func (m Model) pickOrDropFeed() (tea.Model, tea.Cmd) {
+	feed := m.feeds[m.feedCursor]
+	if m.pickedFeedID == 0 {
+		m.pickedFeedID = feed.ID
+		m.status = "picked source: " + feed.Title
+		return m, nil
+	}
+	picked := m.findFeed(m.pickedFeedID)
+	if picked == nil {
+		m.pickedFeedID = 0
+		m.status = "picked source vanished"
+		return m, nil
+	}
+	if err := m.store.MoveFeed(picked.ID, feed.Section, feed.Folder); err != nil {
+		m.err = err.Error()
+		return m, nil
+	}
+	m.status = "moved " + picked.Title + " to " + feed.Section + "/" + feed.Folder
+	m.pickedFeedID = 0
+	return m, loadFeedsCmd(m.store)
+}
+
+func (m Model) createFolder(name string) (tea.Model, tea.Cmd) {
+	name = strings.TrimSpace(name)
+	if name == "" || len(m.feeds) == 0 {
+		return m, nil
+	}
+	feed := m.feeds[m.feedCursor]
+	if err := m.store.UpsertFolder(feed.Section, name); err != nil {
+		m.err = err.Error()
+		return m, nil
+	}
+	m.status = "folder ready: " + feed.Section + "/" + name + " (space drops a picked source)"
+	if m.pickedFeedID != 0 {
+		picked := m.findFeed(m.pickedFeedID)
+		if picked != nil {
+			if err := m.store.MoveFeed(picked.ID, feed.Section, name); err != nil {
+				m.err = err.Error()
+				return m, nil
+			}
+			m.pickedFeedID = 0
+			m.status = "moved " + picked.Title + " to " + feed.Section + "/" + name
+			return m, loadFeedsCmd(m.store)
+		}
+	}
+	return m, nil
+}
+
+func (m Model) findFeed(id int64) *store.Feed {
+	for i := range m.feeds {
+		if m.feeds[i].ID == id {
+			return &m.feeds[i]
+		}
+	}
+	return nil
 }
 
 func (m *Model) page(delta int) {

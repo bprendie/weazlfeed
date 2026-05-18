@@ -49,7 +49,9 @@ func FetchGopher(ctx context.Context, raw string) (Feed, error) {
 	if err := scanner.Err(); err != nil {
 		return Feed{}, err
 	}
-	return parseGopher(raw, u.Hostname(), port, lines), nil
+	parsed := parseGopher(raw, u.Hostname(), port, lines)
+	parsed.Status = 200
+	return parsed, nil
 }
 
 func parseGopher(raw, host, port string, lines []string) Feed {

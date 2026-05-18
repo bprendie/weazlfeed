@@ -4,11 +4,13 @@ import (
 	"strings"
 
 	"github.com/bprendie/weazlfeed/internal/audio"
+	"github.com/bprendie/weazlfeed/internal/store"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if m.asking {
+	if m.asking || m.folderInput {
 		return m.updateInput(msg)
 	}
 	switch msg := msg.(type) {
@@ -18,8 +20,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateKey(msg)
 	case tea.MouseMsg:
 		m.updateMouse(msg)
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		if m.refreshing {
+			return m, cmd
+		}
 	case feedsMsg:
 		m.feeds, m.err = msg.feeds, errText(msg.err)
+		m.folders = msg.folders
 		if len(m.feeds) > 0 {
 			return m, loadItemsCmd(m.store, m.feeds[m.feedCursor].ID, m.hideSludge)
 		}
@@ -28,8 +37,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.clamp()
 		m.renderArticle()
 	case fetchMsg:
+		m.refreshing = false
 		m.err = errText(msg.err)
-		m.status = "refresh complete: new items " + intText(msg.added)
+		m.status = "refresh complete: new " + intText(msg.added) + " failed " + intText(msg.failed)
 		return m, loadFeedsCmd(m.store)
 	case aiMsg:
 		m.err = errText(msg.err)
@@ -78,9 +88,16 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.home()
 	case "end":
 		m.end()
+	case "R":
+		m.refreshing = true
+		m.status = "refreshing all sources"
+		return m, tea.Batch(refreshCmd(m.store, m.feeds, m.ai), m.spinner.Tick)
 	case "r":
-		m.status = "refreshing feeds"
-		return m, refreshCmd(m.store, m.feeds, m.ai)
+		if len(m.feeds) > 0 {
+			m.refreshing = true
+			m.status = "refreshing " + m.feeds[m.feedCursor].Title
+			return m, tea.Batch(refreshCmd(m.store, []store.Feed{m.feeds[m.feedCursor]}, m.ai), m.spinner.Tick)
+		}
 	case "h":
 		m.hideSludge = !m.hideSludge
 		if len(m.feeds) > 0 {
@@ -89,6 +106,9 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		return m.activate()
 	case " ":
+		if m.focus == focusFeeds && len(m.feeds) > 0 {
+			return m.pickOrDropFeed()
+		}
 		if m.paused {
 			_ = m.player.Resume()
 		} else {
@@ -98,6 +118,14 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.savePlayhead()
 	case "s":
 		m.stopAudio()
+	case "n":
+		if m.focus == focusFeeds {
+			m.folderInput = true
+			m.input.Placeholder = "new folder"
+			m.input.Prompt = "folder> "
+			m.input.Focus()
+			return m, nil
+		}
 	case "ctrl+a":
 		if m.aiEnabled && len(m.items) > 0 {
 			m.asking = true
@@ -118,14 +146,22 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch key.String() {
 		case "esc", "ctrl+c":
 			m.asking = false
+			m.folderInput = false
 			m.input.Blur()
 			m.input.SetValue("")
+			m.input.Prompt = "interrogate> "
 			return m, nil
 		case "enter":
 			question := strings.TrimSpace(m.input.Value())
 			m.asking = false
+			folderInput := m.folderInput
+			m.folderInput = false
 			m.input.Blur()
 			m.input.SetValue("")
+			m.input.Prompt = "interrogate> "
+			if folderInput {
+				return m.createFolder(question)
+			}
 			if question != "" && len(m.items) > 0 {
 				m.status = "interrogating active article"
 				return m, aiCmd(m.ai, "ask", m.items[m.itemCursor], question)

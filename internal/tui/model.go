@@ -7,6 +7,7 @@ import (
 	"github.com/bprendie/weazlfeed/internal/config"
 	"github.com/bprendie/weazlfeed/internal/llm"
 	"github.com/bprendie/weazlfeed/internal/store"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
@@ -21,34 +22,39 @@ const (
 )
 
 type Model struct {
-	cfg         config.Config
-	cfgPath     string
-	store       *store.Store
-	styles      styles
-	renderer    *glamour.TermRenderer
-	ai          llm.Client
-	player      audio.Player
-	meter       *audio.Meter
-	input       textinput.Model
-	focus       focus
-	width       int
-	height      int
-	feeds       []store.Feed
-	items       []store.Item
-	feedCursor  int
-	itemCursor  int
-	feedScroll  int
-	itemScroll  int
-	stageScroll int
-	article     string
-	status      string
-	err         string
-	hideSludge  bool
-	aiEnabled   bool
-	asking      bool
-	paused      bool
-	bars        []float64
-	playingID   int64
+	cfg          config.Config
+	cfgPath      string
+	store        *store.Store
+	styles       styles
+	renderer     *glamour.TermRenderer
+	ai           llm.Client
+	player       audio.Player
+	meter        *audio.Meter
+	input        textinput.Model
+	spinner      spinner.Model
+	focus        focus
+	width        int
+	height       int
+	feeds        []store.Feed
+	folders      []store.Folder
+	items        []store.Item
+	feedCursor   int
+	itemCursor   int
+	feedScroll   int
+	itemScroll   int
+	stageScroll  int
+	article      string
+	status       string
+	err          string
+	hideSludge   bool
+	aiEnabled    bool
+	asking       bool
+	folderInput  bool
+	paused       bool
+	bars         []float64
+	playingID    int64
+	refreshing   bool
+	pickedFeedID int64
 }
 
 func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
@@ -57,6 +63,8 @@ func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
 	input.Placeholder = "ask the active article"
 	input.CharLimit = 500
 	input.Prompt = "interrogate> "
+	spin := spinner.New()
+	spin.Spinner = spinner.Line
 	return Model{
 		cfg:        cfg,
 		cfgPath:    cfgPath,
@@ -65,13 +73,14 @@ func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
 		renderer:   renderer,
 		ai:         llm.New(cfg.Active()),
 		input:      input,
+		spinner:    spin,
 		focus:      focusFeeds,
 		hideSludge: cfg.UI.HideSludge,
-		status:     "r refresh | tab focus | enter read/play | ctrl+a ask | ctrl+t triage",
+		status:     "r refresh source | R refresh all | space pick/drop | n folder",
 		aiEnabled:  llm.New(cfg.Active()).Available(context.Background()),
 	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return seedFeedsCmd(m.store, m.cfg.Feeds)
+	return tea.Batch(seedFeedsCmd(m.store, m.cfg.Feeds), m.spinner.Tick)
 }

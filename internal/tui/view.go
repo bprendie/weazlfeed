@@ -48,9 +48,11 @@ func (m Model) renderFeeds(width, height int) string {
 		return m.styles.help.Render(truncate("No feeds yet. Add feeds in config, then run setup or refresh.", width))
 	}
 	var lines []string
+	seenFolders := map[string]bool{}
 	for i, feed := range m.visibleFeeds() {
 		section := firstText(feed.Section, sectionFromFeed(feed))
 		folder := firstText(feed.Folder, folderFromFeed(feed))
+		seenFolders[section+"/"+folder] = true
 		if section != previousSection(m.feeds, m.feedScroll+i) {
 			lines = append(lines, m.styles.status.Render(":: "+section+" ::"))
 		}
@@ -71,6 +73,14 @@ func (m Model) renderFeeds(width, height int) string {
 			line = m.styles.item.Render(line)
 		}
 		lines = append(lines, line)
+	}
+	for _, folder := range m.folders {
+		key := folder.Section + "/" + folder.Name
+		if seenFolders[key] {
+			continue
+		}
+		lines = append(lines, m.styles.status.Render(":: "+folder.Section+" ::"))
+		lines = append(lines, m.styles.help.Render("  ["+folder.Name+"]"))
 	}
 	return fitLines(lines, height-3)
 }
@@ -120,9 +130,16 @@ func (m Model) footer() string {
 	if m.player.Active() {
 		audioState = "audio live"
 	}
+	if m.refreshing {
+		audioState = m.spinner.View() + " refreshing"
+	}
+	picked := ""
+	if m.pickedFeedID != 0 {
+		picked = " | picked source"
+	}
 	parts := []string{
-		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [tab] node [enter] read/dial/play [space] pause [s] stop [r] refresh [q] quit", max(10, m.width))),
-		m.styles.status.Render(ai + " | " + audioState + compactVisualizer(m.visualizer())),
+		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [tab] node [enter] open [space] pick/drop [n] folder [r] refresh source [R] refresh all [q] quit", max(10, m.width))),
+		m.styles.status.Render(ai + " | " + audioState + picked + compactVisualizer(m.visualizer())),
 	}
 	if m.err != "" {
 		parts = append(parts, m.styles.error.Render(m.err))

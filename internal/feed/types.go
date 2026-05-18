@@ -3,9 +3,13 @@ package feed
 import "time"
 
 type Feed struct {
-	Title string
-	Type  string
-	Items []Item
+	Title        string
+	Type         string
+	Status       int
+	ETag         string
+	LastModified string
+	NotModified  bool
+	Items        []Item
 }
 
 type Item struct {

@@ -31,14 +31,16 @@ func seedFeedsCmd(vault *store.Store, seeds []config.SeedFeed) tea.Cmd {
 			}
 		}
 		feeds, err := vault.Feeds()
-		return feedsMsg{feeds: feeds, err: err}
+		folders, folderErr := vault.Folders()
+		return feedsMsg{feeds: feeds, folders: folders, err: firstErr(err, folderErr)}
 	}
 }
 
 func loadFeedsCmd(vault *store.Store) tea.Cmd {
 	return func() tea.Msg {
 		feeds, err := vault.Feeds()
-		return feedsMsg{feeds: feeds, err: err}
+		folders, folderErr := vault.Folders()
+		return feedsMsg{feeds: feeds, folders: folders, err: firstErr(err, folderErr)}
 	}
 }
 
@@ -55,6 +57,7 @@ func refreshCmd(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 		defer cancel()
 		added := 0
+		failed := 0
 		rules, err := vault.Rules()
 		if err != nil {
 			return fetchMsg{err: err}
@@ -65,14 +68,21 @@ func refreshCmd(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Cmd {
 		}
 		useBouncer := len(rulePrompts) > 0 && ai.Available(ctx)
 		for _, src := range feeds {
-			parsed, err := client.Fetch(ctx, src.URL)
+			parsed, err := client.Fetch(ctx, src.URL, src.ETag, src.LastModified)
 			if err != nil {
-				return fetchMsg{added: added, err: err}
+				_ = vault.SetFeedStatus(src.ID, 0, "", "", err.Error())
+				failed++
+				continue
+			}
+			_ = vault.SetFeedStatus(src.ID, parsed.Status, parsed.ETag, parsed.LastModified, "")
+			if parsed.NotModified {
+				_ = vault.MarkFetched(src.ID, time.Now())
+				continue
 			}
 			title := firstText(parsed.Title, src.Title, src.URL)
 			feedID, err := vault.UpsertFeed(title, src.URL, parsed.Type, src.Section, src.Folder, src.Category)
 			if err != nil {
-				return fetchMsg{added: added, err: err}
+				return fetchMsg{added: added, failed: failed, err: err}
 			}
 			for _, parsedItem := range parsed.Items {
 				item := store.Item{
@@ -95,7 +105,7 @@ func refreshCmd(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Cmd {
 				}
 				ok, err := vault.UpsertItem(item)
 				if err != nil {
-					return fetchMsg{added: added, err: err}
+					return fetchMsg{added: added, failed: failed, err: err}
 				}
 				if ok {
 					added++
@@ -103,7 +113,7 @@ func refreshCmd(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Cmd {
 			}
 			_ = vault.MarkFetched(feedID, time.Now())
 		}
-		return fetchMsg{added: added}
+		return fetchMsg{added: added, failed: failed}
 	}
 }
 
@@ -164,4 +174,13 @@ func firstText(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func firstErr(errs ...error) error {
+	for _, err := range errs {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

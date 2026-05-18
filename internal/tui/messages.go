@@ -6,8 +6,9 @@ import (
 )
 
 type feedsMsg struct {
-	feeds []store.Feed
-	err   error
+	feeds   []store.Feed
+	folders []store.Folder
+	err     error
 }
 
 type itemsMsg struct {
@@ -16,8 +17,9 @@ type itemsMsg struct {
 }
 
 type fetchMsg struct {
-	added int
-	err   error
+	added  int
+	failed int
+	err    error
 }
 
 type aiMsg struct {

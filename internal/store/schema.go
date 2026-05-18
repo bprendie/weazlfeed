@@ -9,7 +9,11 @@ CREATE TABLE IF NOT EXISTS feeds (
 	section TEXT NOT NULL DEFAULT 'News',
 	folder TEXT NOT NULL DEFAULT 'General',
 	category TEXT NOT NULL DEFAULT 'GENERAL',
-	last_fetched TEXT
+	last_fetched TEXT,
+	etag TEXT,
+	last_modified TEXT,
+	last_error TEXT,
+	last_status INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS items (
@@ -30,6 +34,13 @@ CREATE TABLE IF NOT EXISTS items (
 	UNIQUE(feed_id, guid)
 );
 
+CREATE TABLE IF NOT EXISTS folders (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	section TEXT NOT NULL,
+	name TEXT NOT NULL,
+	UNIQUE(section, name)
+);
+
 CREATE TABLE IF NOT EXISTS bouncer_rules (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	rule_prompt TEXT NOT NULL
@@ -42,4 +53,8 @@ ALTER TABLE items ADD COLUMN playhead_seconds INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE feeds ADD COLUMN category TEXT NOT NULL DEFAULT 'GENERAL';
 ALTER TABLE feeds ADD COLUMN section TEXT NOT NULL DEFAULT 'News';
 ALTER TABLE feeds ADD COLUMN folder TEXT NOT NULL DEFAULT 'General';
+ALTER TABLE feeds ADD COLUMN etag TEXT;
+ALTER TABLE feeds ADD COLUMN last_modified TEXT;
+ALTER TABLE feeds ADD COLUMN last_error TEXT;
+ALTER TABLE feeds ADD COLUMN last_status INTEGER NOT NULL DEFAULT 0;
 `
