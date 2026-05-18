@@ -31,12 +31,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
-		if m.refreshing {
+		if m.refreshing || m.rendering {
 			return m, cmd
 		}
 	case feedsMsg:
 		m.feeds, m.err = msg.feeds, errText(msg.err)
 		m.folders = msg.folders
+		m.clamp()
 		if len(m.feeds) > 0 {
 			return m, prefetchItemsCmd(m.store, m.feeds, m.hideSludge)
 		}
@@ -77,11 +78,31 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = "local extraction complete"
 		}
 	case articleMsg:
+		m.rendering = false
 		m.err = errText(msg.err)
 		if msg.err == nil {
 			m.setArticle(msg.text)
 			m.stageScroll = 0
 			m.status = "gopher target loaded"
+		}
+	case readerMsg:
+		m.rendering = false
+		m.err = errText(msg.err)
+		if msg.err == nil {
+			m.rawArticle = msg.raw
+			m.article = msg.rendered
+			m.stageScroll = 0
+			m.status = "reader ready"
+			for i := range m.items {
+				if m.items[i].ID == msg.item.ID {
+					m.items[i] = msg.item
+					m.items[i].ReadStatus = true
+					if msg.item.FeedID != 0 {
+						m.itemCache[msg.item.FeedID] = m.items
+					}
+					break
+				}
+			}
 		}
 	case podcastSearchMsg:
 		m.err = errText(msg.err)
@@ -143,11 +164,12 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.status = m.spinner.View() + " refreshing all sources"
 		return m, tea.Batch(refreshAllCmd(m.store, m.ai), m.spinner.Tick)
 	case "r":
-		if len(m.feeds) > 0 {
+		if row, ok := m.selectedSourceRow(); ok && row.kind == sourceFeed {
+			feed := m.feeds[row.feedIndex]
 			m.refreshing = true
-			delete(m.itemCache, m.feeds[m.feedCursor].ID)
-			m.status = m.spinner.View() + " refreshing " + m.feeds[m.feedCursor].Title
-			return m, tea.Batch(refreshCmd(m.store, []store.Feed{m.feeds[m.feedCursor]}, m.ai), m.spinner.Tick)
+			delete(m.itemCache, feed.ID)
+			m.status = m.spinner.View() + " refreshing " + feed.Title
+			return m, tea.Batch(refreshCmd(m.store, []store.Feed{feed}, m.ai), m.spinner.Tick)
 		}
 	case "h":
 		m.hideSludge = !m.hideSludge

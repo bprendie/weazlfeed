@@ -10,7 +10,12 @@ import (
 )
 
 func (m Model) pickOrDropFeed() (tea.Model, tea.Cmd) {
-	feed := m.feeds[m.feedCursor]
+	row, ok := m.selectedSourceRow()
+	if !ok || row.kind != sourceFeed {
+		m.status = "space picks up sources only; press enter to fold folders"
+		return m, nil
+	}
+	feed := m.feeds[row.feedIndex]
 	if m.pickedFeedID == 0 {
 		m.pickedFeedID = feed.ID
 		m.status = "picked source: " + feed.Title
@@ -36,21 +41,28 @@ func (m Model) createFolder(name string) (tea.Model, tea.Cmd) {
 	if name == "" || len(m.feeds) == 0 {
 		return m, nil
 	}
-	feed := m.feeds[m.feedCursor]
-	if err := m.store.UpsertFolder(feed.Section, name); err != nil {
+	section := "News"
+	if row, ok := m.selectedSourceRow(); ok {
+		section = row.section
+		if row.kind == sourceFeed {
+			feed := m.feeds[row.feedIndex]
+			section = firstText(feed.Section, sectionFromFeed(feed))
+		}
+	}
+	if err := m.store.UpsertFolder(section, name); err != nil {
 		m.err = err.Error()
 		return m, nil
 	}
-	m.status = "folder ready: " + feed.Section + "/" + name + " (space drops a picked source)"
+	m.status = "folder ready: " + section + "/" + name + " (space drops a picked source)"
 	if m.pickedFeedID != 0 {
 		picked := m.findFeed(m.pickedFeedID)
 		if picked != nil {
-			if err := m.store.MoveFeed(picked.ID, feed.Section, name); err != nil {
+			if err := m.store.MoveFeed(picked.ID, section, name); err != nil {
 				m.err = err.Error()
 				return m, nil
 			}
 			m.pickedFeedID = 0
-			m.status = "moved " + picked.Title + " to " + feed.Section + "/" + name
+			m.status = "moved " + picked.Title + " to " + section + "/" + name
 			return m, loadFeedsCmd(m.store)
 		}
 	}
@@ -88,7 +100,12 @@ func (m *Model) page(delta int) {
 func (m *Model) home() {
 	switch m.focus {
 	case focusFeeds:
-		m.feedCursor, m.feedScroll = 0, 0
+		m.sourceCursor, m.feedScroll = 0, 0
+		for _, index := range m.selectableSourceRows() {
+			m.sourceCursor = index
+			break
+		}
+		m.syncFeedCursorFromSource()
 	case focusItems:
 		m.itemCursor, m.itemScroll = 0, 0
 	case focusArticle:
@@ -99,9 +116,10 @@ func (m *Model) home() {
 func (m *Model) end() {
 	switch m.focus {
 	case focusFeeds:
-		indices := m.visibleFeedIndices()
+		indices := m.selectableSourceRows()
 		if len(indices) > 0 {
-			m.feedCursor = indices[len(indices)-1]
+			m.sourceCursor = indices[len(indices)-1]
+			m.syncFeedCursorFromSource()
 		}
 	case focusItems:
 		m.itemCursor = m.itemTargetCount() - 1
@@ -143,7 +161,18 @@ func (m *Model) scrollFocused(delta int) {
 
 func (m Model) activate() (tea.Model, tea.Cmd) {
 	if m.focus == focusFeeds && len(m.feeds) > 0 {
-		feed := m.feeds[m.feedCursor]
+		row, ok := m.selectedSourceRow()
+		if !ok {
+			return m, nil
+		}
+		if row.kind == sourceFolder {
+			return m.toggleCurrentFolder(!row.collapsed)
+		}
+		if row.kind != sourceFeed {
+			return m, nil
+		}
+		feed := m.feeds[row.feedIndex]
+		m.feedCursor = row.feedIndex
 		m.podcasts = nil
 		m.focus = focusItems
 		m.status = "opened source: " + feed.Title
@@ -167,19 +196,12 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	if item.FeedID != 0 {
 		m.itemCache[item.FeedID] = m.items
 	}
-	if item.ContentMarkdown == "" && item.ContentHTML == "" {
-		full, err := m.store.Item(item.ID)
-		if err != nil {
-			m.err = err.Error()
-			return m, nil
-		}
-		m.items[m.itemCursor] = full
-		item = full
-	}
 	if strings.HasPrefix(strings.ToLower(item.Link), "gopher://") {
 		m.focus = focusArticle
+		m.rendering = true
+		m.clearArticle()
 		m.status = "dialing gopher target"
-		return m, gopherArticleCmd(item.Link)
+		return m, tea.Batch(gopherArticleCmd(item.Link), m.spinner.Tick)
 	}
 	if item.EnclosureURL != "" && strings.HasPrefix(item.EnclosureType, "audio/") {
 		m.stopAudio()
@@ -199,8 +221,10 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	}
 	m.focus = focusArticle
 	m.stageScroll = 0
-	m.renderArticle()
-	return m, nil
+	m.rendering = true
+	m.clearArticle()
+	m.status = m.spinner.View() + " rendering reader"
+	return m, tea.Batch(renderReaderCmd(m.store, item, m.readerWidth()), m.spinner.Tick)
 }
 
 func (m *Model) stopAudio() {
@@ -223,6 +247,19 @@ func (m *Model) savePlayhead() {
 }
 
 func (m *Model) clamp() {
+	rows := m.sourceRows()
+	if m.sourceCursor < 0 {
+		m.sourceCursor = 0
+	}
+	if m.sourceCursor >= len(rows) && len(rows) > 0 {
+		m.sourceCursor = len(rows) - 1
+	}
+	if len(rows) > 0 && rows[m.sourceCursor].kind == sourceSection {
+		indices := m.selectableSourceRows()
+		if len(indices) > 0 {
+			m.sourceCursor = indices[0]
+		}
+	}
 	if m.feedCursor < 0 {
 		m.feedCursor = 0
 	}

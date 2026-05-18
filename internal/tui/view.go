@@ -54,7 +54,8 @@ func (m Model) renderFeeds(width, height int) string {
 	rows := m.sourceRows()
 	rows = windowSourceRows(rows, m.feedScroll, max(1, height-3))
 	lines := make([]string, 0, len(rows))
-	for _, row := range rows {
+	for i, row := range rows {
+		rowIndex := m.feedScroll + i
 		switch row.kind {
 		case sourceSection:
 			lines = append(lines, m.styles.status.Render(truncate(":: "+row.title+" ::", width)))
@@ -63,14 +64,20 @@ func (m Model) renderFeeds(width, height int) string {
 			if row.collapsed {
 				marker = "[+]"
 			}
-			lines = append(lines, m.styles.help.Render(truncate("  "+marker+" "+row.title, width)))
+			line := truncate("  "+marker+" "+row.title, width)
+			if rowIndex == m.sourceCursor {
+				line = m.styles.selected.Render(truncate("=> "+marker+" "+row.title, width))
+			} else {
+				line = m.styles.help.Render(line)
+			}
+			lines = append(lines, line)
 		case sourceFeed:
 			prefix := "  "
 			if m.feeds[row.feedIndex].Type == "gopher" {
 				prefix = "g>"
 			}
 			line := truncate(" - "+prefix+" "+row.title+" ["+intText(row.unread)+"]", width)
-			if row.feedIndex == m.feedCursor {
+			if rowIndex == m.sourceCursor {
 				line = m.styles.selected.Render(truncate("=> "+prefix+" "+row.title+" ["+intText(row.unread)+"]", width))
 			} else {
 				line = m.styles.item.Render(line)
@@ -112,6 +119,9 @@ func (m Model) renderStage(width, height int) string {
 	if m.asking || m.folderInput || m.podcastInput {
 		return truncate(m.input.View(), width)
 	}
+	if m.rendering {
+		return fitLines([]string{m.styles.status.Render(m.spinner.View() + " rendering reader")}, height-3)
+	}
 	lines := strings.Split(m.article, "\n")
 	lines = windowLines(lines, m.stageScroll, height-3)
 	for i := range lines {
@@ -131,6 +141,9 @@ func (m Model) footer() string {
 	}
 	if m.refreshing {
 		audioState = m.spinner.View() + " refreshing"
+	}
+	if m.rendering {
+		audioState = m.spinner.View() + " rendering"
 	}
 	picked := ""
 	if m.pickedFeedID != 0 {

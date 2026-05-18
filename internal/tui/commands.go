@@ -133,6 +133,23 @@ func gopherArticleCmd(url string) tea.Cmd {
 	}
 }
 
+func renderReaderCmd(vault *store.Store, item store.Item, width int) tea.Cmd {
+	return func() tea.Msg {
+		if item.ContentMarkdown == "" && item.ContentHTML == "" {
+			full, err := vault.Item(item.ID)
+			if err != nil {
+				return readerMsg{err: err}
+			}
+			item = full
+		}
+		text := item.ContentMarkdown
+		if text == "" {
+			text = item.Link
+		}
+		return readerMsg{item: item, raw: text, rendered: renderMarkdownText(text, width)}
+	}
+}
+
 func meterCmd(ch <-chan audio.Sample) tea.Cmd {
 	return func() tea.Msg {
 		sample, ok := <-ch

@@ -56,14 +56,45 @@ func (m Model) visibleFeedIndices() []int {
 	return indices
 }
 
-func (m Model) sourceCursorRow() int {
+func (m Model) selectedSourceRow() (sourceRow, bool) {
 	rows := m.sourceRows()
+	if len(rows) == 0 {
+		return sourceRow{}, false
+	}
+	index := clampInt(m.sourceCursor, 0, len(rows)-1)
+	return rows[index], true
+}
+
+func (m Model) selectableSourceRows() []int {
+	rows := m.sourceRows()
+	indices := make([]int, 0, len(rows))
 	for i, row := range rows {
-		if row.kind == sourceFeed && row.feedIndex == m.feedCursor {
-			return i
+		if row.kind != sourceSection {
+			indices = append(indices, i)
 		}
 	}
-	return 0
+	return indices
+}
+
+func (m Model) sourceCursorRow() int {
+	return m.sourceCursor
+}
+
+func (m *Model) syncFeedCursorFromSource() {
+	row, ok := m.selectedSourceRow()
+	if ok && row.kind == sourceFeed {
+		m.feedCursor = row.feedIndex
+	}
+}
+
+func (m *Model) selectSourceRow(section, folder string) {
+	for i, row := range m.sourceRows() {
+		if row.kind == sourceFolder && row.section == section && row.folder == folder {
+			m.sourceCursor = i
+			m.syncFeedCursorFromSource()
+			return
+		}
+	}
 }
 
 func (m Model) folderCollapsed(section, folder string) bool {

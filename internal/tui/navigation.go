@@ -5,19 +5,20 @@ import tea "github.com/charmbracelet/bubbletea"
 func (m *Model) move(delta int) {
 	switch m.focus {
 	case focusFeeds:
-		indices := m.visibleFeedIndices()
+		indices := m.selectableSourceRows()
 		if len(indices) == 0 {
 			return
 		}
 		pos := 0
 		for i, index := range indices {
-			if index == m.feedCursor {
+			if index == m.sourceCursor {
 				pos = i
 				break
 			}
 		}
 		pos = clampInt(pos+delta, 0, len(indices)-1)
-		m.feedCursor = indices[pos]
+		m.sourceCursor = indices[pos]
+		m.syncFeedCursorFromSource()
 		m.clamp()
 		m.ensureCursorVisible()
 		m.itemCursor = 0
@@ -46,13 +47,19 @@ func (m *Model) retreat() {
 }
 
 func (m Model) toggleCurrentFolder(collapsed bool) (tea.Model, tea.Cmd) {
-	if len(m.feeds) == 0 {
+	row, ok := m.selectedSourceRow()
+	if !ok {
 		return m, nil
 	}
-	current := m.feedCursor
-	feed := m.feeds[m.feedCursor]
-	section := firstText(feed.Section, sectionFromFeed(feed))
-	folder := firstText(feed.Folder, folderFromFeed(feed))
+	section, folder := row.section, row.folder
+	if row.kind == sourceFeed {
+		feed := m.feeds[row.feedIndex]
+		section = firstText(feed.Section, sectionFromFeed(feed))
+		folder = firstText(feed.Folder, folderFromFeed(feed))
+	}
+	if row.kind == sourceSection || folder == "" {
+		return m, nil
+	}
 	if err := m.setFolderCollapsed(section, folder, collapsed); err != nil {
 		m.err = err.Error()
 		return m, nil
@@ -63,15 +70,8 @@ func (m Model) toggleCurrentFolder(collapsed bool) (tea.Model, tea.Cmd) {
 	} else {
 		m.status += " expanded"
 	}
-	indices := m.visibleFeedIndices()
-	if len(indices) > 0 {
-		m.feedCursor = indices[0]
-		for _, index := range indices {
-			if index >= current {
-				m.feedCursor = index
-				break
-			}
-		}
+	if collapsed {
+		m.selectSourceRow(section, folder)
 	}
 	m.ensureCursorVisible()
 	return m, nil

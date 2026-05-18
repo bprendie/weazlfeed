@@ -48,6 +48,7 @@ type Model struct {
 	items        []store.Item
 	itemCache    map[int64][]store.Item
 	podcasts     []podcast.Result
+	sourceCursor int
 	feedCursor   int
 	itemCursor   int
 	feedScroll   int
@@ -66,6 +67,7 @@ type Model struct {
 	bars         []float64
 	playingID    int64
 	refreshing   bool
+	rendering    bool
 	pickedFeedID int64
 	lockMode     lockMode
 	pendingPass  string

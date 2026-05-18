@@ -10,12 +10,20 @@ import (
 const glamourMaxBytes = 24 * 1024
 
 func (m Model) renderMarkdown(text string) string {
+	return renderMarkdownText(text, m.readerWidth())
+}
+
+func (m Model) readerWidth() int {
+	dims, _ := m.layout()
+	return max(20, panelContentWidth(m.styles.panel, dims.right)-2)
+}
+
+func renderMarkdownText(text string, width int) string {
 	text = strings.TrimSpace(text)
 	if text == "" {
 		return ""
 	}
-	dims, _ := m.layout()
-	width := max(20, panelContentWidth(m.styles.panel, dims.right)-2)
+	width = max(20, width)
 	if len(text) > glamourMaxBytes {
 		return fastWrapMarkdown(text, width)
 	}

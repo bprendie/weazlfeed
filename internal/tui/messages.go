@@ -44,6 +44,13 @@ type articleMsg struct {
 	err  error
 }
 
+type readerMsg struct {
+	item     store.Item
+	raw      string
+	rendered string
+	err      error
+}
+
 type podcastSearchMsg struct {
 	results []podcast.Result
 	err     error
