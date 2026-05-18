@@ -43,9 +43,9 @@ Podcasts and audio
   enter on result     Subscribe the podcast into the selected Podcasts folder.
   enter on audio      Play or resume with mpv.
   space               Pause or resume audio when not picking/dropping a source.
-  , or <              Seek backward 10 seconds.
-  . or >              Seek forward 30 seconds.
-  s                   Stop audio and save playhead.
+  < or ,              Seek backward 10 seconds.
+  > or .              Seek forward 30 seconds.
+  s or esc            Stop/close audio and save playhead.
 
 Reader and local AI
   enter on article    Render the article.

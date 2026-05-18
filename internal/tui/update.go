@@ -186,6 +186,10 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "tab":
 		m.focus = (m.focus + 1) % 3
 	case "esc":
+		if m.playingID != 0 {
+			m.stopAudio()
+			return m, nil
+		}
 		m.retreat()
 	case "ctrl+k", "?", "f1":
 		m.helpOpen = true

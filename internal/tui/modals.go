@@ -62,7 +62,7 @@ func (m Model) renderAudioModal(bodyHeight int) string {
 		"",
 		m.visualizer.View(),
 		"",
-		m.styles.help.Render("space pause/resume | , -10s | . +30s | s stop"),
+		m.styles.help.Render("space pause/resume | < -10s | > +30s | s stop/close | esc close"),
 	}
 	modal := m.styles.panel.
 		Width(contentWidth).

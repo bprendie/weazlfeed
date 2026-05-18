@@ -37,13 +37,28 @@ func (m *Model) stopAudio() {
 	m.playingTotal = 0
 	m.paused = false
 	m.energy = audio.Sample{}
+	m.status = "audio stopped"
 }
 
 func (m *Model) savePlayhead() {
 	if m.playingID == 0 {
 		return
 	}
-	_ = m.store.SetPlayhead(m.playingID, m.player.Position())
+	position := m.player.Position()
+	_ = m.store.SetPlayhead(m.playingID, position)
+	m.updatePlayhead(position)
+}
+
+func (m *Model) updatePlayhead(position int) {
+	for i := range m.items {
+		if m.items[i].ID == m.playingID {
+			m.items[i].PlayheadSeconds = position
+			if m.items[i].FeedID != 0 {
+				m.itemCache[m.items[i].FeedID] = m.items
+			}
+			return
+		}
+	}
 }
 
 func (m *Model) seekAudio(delta int) {
