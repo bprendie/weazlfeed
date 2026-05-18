@@ -49,7 +49,7 @@ func loadFeedsCmd(vault *store.Store) tea.Cmd {
 func loadItemsCmd(vault *store.Store, feedID int64, hide bool) tea.Cmd {
 	return func() tea.Msg {
 		items, err := vault.Items(feedID, hide)
-		return itemsMsg{items: items, err: err}
+		return itemsMsg{feedID: feedID, items: items, err: err}
 	}
 }
 

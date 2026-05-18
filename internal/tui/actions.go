@@ -38,9 +38,41 @@ func (m *Model) retreat() {
 		m.focus--
 	}
 	m.status = "back"
-	m.rerenderArticle()
 	m.clamp()
 	m.ensureCursorVisible()
+}
+
+func (m Model) selectedFeedID() int64 {
+	if len(m.feeds) == 0 || m.feedCursor < 0 || m.feedCursor >= len(m.feeds) {
+		return 0
+	}
+	return m.feeds[m.feedCursor].ID
+}
+
+func (m Model) prefetchSelectedFeedCmd() tea.Cmd {
+	feedID := m.selectedFeedID()
+	if feedID == 0 {
+		return nil
+	}
+	if _, ok := m.itemCache[feedID]; ok {
+		return nil
+	}
+	return loadItemsCmd(m.store, feedID, m.hideSludge)
+}
+
+func (m *Model) useCachedItems(feedID int64) bool {
+	items, ok := m.itemCache[feedID]
+	if !ok {
+		return false
+	}
+	m.items = items
+	m.podcasts = nil
+	m.itemCursor = 0
+	m.itemScroll = 0
+	m.stageScroll = 0
+	m.clamp()
+	m.showItemHint()
+	return true
 }
 
 func (m Model) pickOrDropFeed() (tea.Model, tea.Cmd) {
@@ -172,13 +204,17 @@ func (m *Model) scrollFocused(delta int) {
 
 func (m Model) activate() (tea.Model, tea.Cmd) {
 	if m.focus == focusFeeds && len(m.feeds) > 0 {
+		feed := m.feeds[m.feedCursor]
 		m.podcasts = nil
 		m.focus = focusItems
+		m.status = "opened source: " + feed.Title
+		if m.useCachedItems(feed.ID) {
+			return m, nil
+		}
 		m.itemCursor = 0
 		m.itemScroll = 0
 		m.stageScroll = 0
-		m.status = "opened source: " + m.feeds[m.feedCursor].Title
-		return m, loadItemsCmd(m.store, m.feeds[m.feedCursor].ID, m.hideSludge)
+		return m, loadItemsCmd(m.store, feed.ID, m.hideSludge)
 	}
 	if m.focus == focusItems && m.podcastMode() {
 		return m.subscribePodcast()
@@ -189,6 +225,9 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	item := m.items[m.itemCursor]
 	_ = m.store.MarkRead(item.ID)
 	m.items[m.itemCursor].ReadStatus = true
+	if item.FeedID != 0 {
+		m.itemCache[item.FeedID] = m.items
+	}
 	if item.ContentMarkdown == "" && item.ContentHTML == "" {
 		full, err := m.store.Item(item.ID)
 		if err != nil {

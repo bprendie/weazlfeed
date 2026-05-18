@@ -13,8 +13,9 @@ type feedsMsg struct {
 }
 
 type itemsMsg struct {
-	items []store.Item
-	err   error
+	feedID int64
+	items  []store.Item
+	err    error
 }
 
 type fetchMsg struct {

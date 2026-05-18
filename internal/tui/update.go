@@ -16,7 +16,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		m.rerenderArticle()
 	case tea.KeyMsg:
 		return m.updateKey(msg)
 	case tea.MouseMsg:
@@ -31,15 +30,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.feeds, m.err = msg.feeds, errText(msg.err)
 		m.folders = msg.folders
 		if len(m.feeds) > 0 {
-			return m, loadItemsCmd(m.store, m.feeds[m.feedCursor].ID, m.hideSludge)
+			return m, m.prefetchSelectedFeedCmd()
 		}
 	case itemsMsg:
-		m.items, m.err = msg.items, errText(msg.err)
-		m.podcasts = nil
-		m.clamp()
-		m.showItemHint()
+		m.err = errText(msg.err)
+		if msg.err == nil {
+			m.itemCache[msg.feedID] = msg.items
+			if m.focus == focusItems && m.selectedFeedID() == msg.feedID {
+				m.items = msg.items
+				m.podcasts = nil
+				m.clamp()
+				m.showItemHint()
+			}
+		}
 	case fetchMsg:
 		m.refreshing = false
+		m.itemCache = map[int64][]store.Item{}
 		m.err = errText(msg.err)
 		m.status = "refresh complete: checked " + intText(msg.checked) + " new " + intText(msg.added) + " failed " + intText(msg.failed)
 		return m, loadFeedsCmd(m.store)
@@ -88,13 +94,20 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "tab":
 		m.focus = (m.focus + 1) % 3
-		m.rerenderArticle()
 	case "esc":
 		m.retreat()
 	case "j", "down":
+		wasFeeds := m.focus == focusFeeds
 		m.move(1)
+		if wasFeeds {
+			return m, m.prefetchSelectedFeedCmd()
+		}
 	case "k", "up":
+		wasFeeds := m.focus == focusFeeds
 		m.move(-1)
+		if wasFeeds {
+			return m, m.prefetchSelectedFeedCmd()
+		}
 	case "pgdown":
 		m.page(1)
 	case "pgup":
@@ -105,16 +118,19 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.end()
 	case "R":
 		m.refreshing = true
+		m.itemCache = map[int64][]store.Item{}
 		m.status = m.spinner.View() + " refreshing all sources"
 		return m, tea.Batch(refreshAllCmd(m.store, m.ai), m.spinner.Tick)
 	case "r":
 		if len(m.feeds) > 0 {
 			m.refreshing = true
+			delete(m.itemCache, m.feeds[m.feedCursor].ID)
 			m.status = m.spinner.View() + " refreshing " + m.feeds[m.feedCursor].Title
 			return m, tea.Batch(refreshCmd(m.store, []store.Feed{m.feeds[m.feedCursor]}, m.ai), m.spinner.Tick)
 		}
 	case "h":
 		m.hideSludge = !m.hideSludge
+		m.itemCache = map[int64][]store.Item{}
 		if len(m.feeds) > 0 {
 			return m, loadItemsCmd(m.store, m.feeds[m.feedCursor].ID, m.hideSludge)
 		}

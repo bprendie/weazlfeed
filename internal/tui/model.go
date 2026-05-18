@@ -37,6 +37,7 @@ type Model struct {
 	feeds        []store.Feed
 	folders      []store.Folder
 	items        []store.Item
+	itemCache    map[int64][]store.Item
 	podcasts     []podcast.Result
 	feedCursor   int
 	itemCursor   int
@@ -72,6 +73,7 @@ func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
 		store:      vault,
 		styles:     newStyles(),
 		ai:         llm.New(cfg.Active()),
+		itemCache:  map[int64][]store.Item{},
 		input:      input,
 		spinner:    spin,
 		focus:      focusFeeds,
