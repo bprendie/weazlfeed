@@ -38,6 +38,7 @@ Sources and folders
   r                   Refresh selected source.
   R                   Refresh all sources.
   h                   Hide or show items flagged as sludge.
+  ctrl+b              Open the Bouncer rule desk.
 
 Podcasts and audio
   p                   Open the podcast directory.
@@ -54,6 +55,7 @@ Reader and local AI
   enter on article    Render the article.
   ctrl+a              Ask the local model about the active article.
   ctrl+t              Extract critical points from the active article.
+  ctrl+b, s           Scan the active item with Bouncer rules.
 
 Gopher
   gopher:// URLs are routed into the Gopher section automatically.

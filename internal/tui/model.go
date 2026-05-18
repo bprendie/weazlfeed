@@ -62,9 +62,14 @@ type Model struct {
 	gopherStack      [][]store.Item
 	itemCache        map[int64][]store.Item
 	podcasts         []podcast.Result
+	bouncerRules     []store.BouncerRule
 	podcastCursor    int
 	podcastScroll    int
 	podcastSearching bool
+	bouncerOpen      bool
+	bouncerInput     bool
+	bouncerCursor    int
+	bouncerScanning  bool
 	sourceCursor     int
 	feedCursor       int
 	itemCursor       int

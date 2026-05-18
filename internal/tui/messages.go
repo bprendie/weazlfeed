@@ -9,6 +9,7 @@ type feedsMsg struct {
 	feeds          []store.Feed
 	folders        []store.Folder
 	interrogations []store.AIOutput
+	rules          []store.BouncerRule
 	err            error
 }
 
@@ -95,4 +96,19 @@ type podcastSearchMsg struct {
 
 type lockMsg struct {
 	err error
+}
+
+type bouncerRulesMsg struct {
+	rules []store.BouncerRule
+	err   error
+}
+
+type bouncerActionMsg struct {
+	rules []store.BouncerRule
+	err   error
+}
+
+type bouncerScanMsg struct {
+	scan store.BouncerScan
+	err  error
 }

@@ -120,6 +120,44 @@ func (m Model) renderPodcastModal(bodyHeight int) string {
 	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
 }
 
+func (m Model) renderBouncerModal(bodyHeight int) string {
+	outerWidth := clampInt(m.width-8, 48, 104)
+	contentWidth := max(32, outerWidth-4)
+	contentHeight := max(10, bodyHeight-4)
+	lines := []string{
+		m.styles.status.Render("BOUNCER"),
+		m.styles.help.Render("n new rule | d delete | s scan selected | esc close"),
+		"",
+	}
+	if m.bouncerInput {
+		input := m.input
+		input.Width = contentWidth
+		lines = append(lines, input.View(), "", m.styles.help.Render("enter save | esc cancel"))
+	} else if m.bouncerScanning {
+		lines = append(lines, m.styles.status.Render(gradientStatus(m.spinner.View()+" checking the guest list")))
+	} else if len(m.bouncerRules) == 0 {
+		lines = append(lines, m.styles.help.Render("No rules yet. Press n to add a sludge filter."))
+	} else {
+		for i, rule := range m.bouncerRules {
+			line := truncate(" - "+rule.Prompt, contentWidth)
+			if i == m.bouncerCursor {
+				line = m.styles.selected.Render(truncate("=> "+rule.Prompt, contentWidth))
+			} else {
+				line = m.styles.item.Render(line)
+			}
+			lines = append(lines, line)
+		}
+	}
+	content := strings.Join(exactLines(lines, contentHeight), "\n")
+	modal := m.styles.panel.
+		Width(contentWidth).
+		Height(contentHeight).
+		BorderForeground(crushPink).
+		Padding(1, 2).
+		Render(content)
+	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
+}
+
 func (m Model) renderDeleteFeedModal(bodyHeight int) string {
 	outerWidth := clampInt(m.width-8, 36, 88)
 	contentWidth := max(24, outerWidth-4)

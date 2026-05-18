@@ -48,6 +48,12 @@ type BouncerRule struct {
 	Prompt string
 }
 
+type BouncerScan struct {
+	ItemID  int64
+	Title   string
+	Flagged bool
+}
+
 type AIOutput struct {
 	ID          int64
 	ItemID      int64

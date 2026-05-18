@@ -30,6 +30,9 @@ func (m Model) View() string {
 	if m.podcastInput {
 		body = m.renderPodcastModal(bodyHeight)
 	}
+	if m.bouncerOpen {
+		body = m.renderBouncerModal(bodyHeight)
+	}
 	if m.urlInput {
 		body = m.renderURLModal(bodyHeight)
 	}
@@ -178,6 +181,10 @@ func (m Model) footer() string {
 	if m.aiEnabled {
 		ai = "ai on"
 	}
+	bouncer := "bouncer off"
+	if len(m.bouncerRules) > 0 && m.aiEnabled {
+		bouncer = "bouncer on"
+	}
 	audioState := "audio idle"
 	if m.player.Active() {
 		audioState = audioPosition(m.player.Position(), m.playingTotal)
@@ -201,7 +208,7 @@ func (m Model) footer() string {
 	}
 	parts := []string{
 		m.styles.help.Render(truncate("[j/k] nav [enter] open [esc/left] back [a] add [r/R] refresh [ctrl+k] keys [q] quit", max(10, m.width))),
-		m.styles.status.Render(ai + aiKeys + " | " + audioState + picked),
+		m.styles.status.Render(ai + aiKeys + " | " + bouncer + " [ctrl+b] | " + audioState + picked),
 	}
 	if m.err != "" {
 		parts = append(parts, m.styles.error.Render(m.err))
@@ -382,19 +389,4 @@ func sectionFromFeed(feed store.Feed) string {
 		return "Gopher"
 	}
 	return "News"
-}
-
-func folderFromFeed(feed store.Feed) string {
-	if feed.Folder != "" {
-		return feed.Folder
-	}
-	return titleCase(firstText(feed.Category, "General"))
-}
-
-func titleCase(value string) string {
-	value = strings.ToLower(value)
-	if value == "" {
-		return ""
-	}
-	return strings.ToUpper(value[:1]) + value[1:]
 }

@@ -26,6 +26,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.confirmDelete {
 		return m.updateDeleteFeed(msg)
 	}
+	if m.bouncerOpen {
+		return m.updateBouncer(msg)
+	}
 	if m.podcastInput {
 		return m.updatePodcastDirectory(msg)
 	}
@@ -51,6 +54,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.feeds, m.err = msg.feeds, errText(msg.err)
 		m.folders = msg.folders
 		m.interrogations = msg.interrogations
+		m.bouncerRules = msg.rules
 		m.revealPendingFeed()
 		m.clamp()
 		if len(m.feeds) > 0 {
@@ -191,6 +195,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.input.Blur()
 			m.status = "podcast search: " + intText(len(msg.results)) + " results"
 		}
+	case bouncerRulesMsg:
+		return m.handleBouncerRulesMsg(msg)
+	case bouncerActionMsg:
+		return m.handleBouncerActionMsg(msg)
+	case bouncerScanMsg:
+		return m.handleBouncerScanMsg(msg)
 	case playheadTickMsg:
 		if m.playingID != 0 {
 			m.savePlayhead()
@@ -245,6 +255,12 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+k", "?", "f1":
 		m.helpOpen = true
 		m.status = "help"
+	case "ctrl+b":
+		m.bouncerOpen = true
+		m.bouncerInput = false
+		m.bouncerCursor = clampInt(m.bouncerCursor, 0, max(0, len(m.bouncerRules)-1))
+		m.status = "bouncer rules"
+		return m, loadBouncerRulesCmd(m.store)
 	case "ctrl+d":
 		return m.startDeleteFeed()
 	case "j", "down":

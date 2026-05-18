@@ -35,7 +35,8 @@ func seedFeedsCmd(vault *store.Store, seeds []config.SeedFeed) tea.Cmd {
 		feeds, err := vault.Feeds()
 		folders, folderErr := vault.Folders()
 		interrogations, aiErr := vault.AIOutputs("ask")
-		return feedsMsg{feeds: feeds, folders: folders, interrogations: interrogations, err: firstErr(err, folderErr, aiErr)}
+		rules, rulesErr := vault.Rules()
+		return feedsMsg{feeds: feeds, folders: folders, interrogations: interrogations, rules: rules, err: firstErr(err, folderErr, aiErr, rulesErr)}
 	}
 }
 
@@ -44,7 +45,8 @@ func loadFeedsCmd(vault *store.Store) tea.Cmd {
 		feeds, err := vault.Feeds()
 		folders, folderErr := vault.Folders()
 		interrogations, aiErr := vault.AIOutputs("ask")
-		return feedsMsg{feeds: feeds, folders: folders, interrogations: interrogations, err: firstErr(err, folderErr, aiErr)}
+		rules, rulesErr := vault.Rules()
+		return feedsMsg{feeds: feeds, folders: folders, interrogations: interrogations, rules: rules, err: firstErr(err, folderErr, aiErr, rulesErr)}
 	}
 }
 

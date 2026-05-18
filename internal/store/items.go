@@ -139,6 +139,20 @@ func (s *Store) Rules() ([]BouncerRule, error) {
 	return rules, rows.Err()
 }
 
+func (s *Store) AddRule(prompt string) error {
+	prompt, err := s.encryptText(prompt)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`INSERT INTO bouncer_rules(rule_prompt) VALUES(?)`, prompt)
+	return err
+}
+
+func (s *Store) DeleteRule(id int64) error {
+	_, err := s.db.Exec(`DELETE FROM bouncer_rules WHERE id = ?`, id)
+	return err
+}
+
 func (s *Store) decryptItem(item *Item) {
 	item.Title = s.decryptText(item.Title)
 	item.Link = s.decryptText(item.Link)
