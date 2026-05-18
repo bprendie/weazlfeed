@@ -47,6 +47,7 @@ Podcasts and audio
   < or ,              Seek backward 10 seconds.
   > or .              Seek forward 30 seconds.
   esc                 Stop/close audio and save playhead.
+  f                   Mark the selected podcast episode finished.
 
 Reader and local AI
   enter on article    Render the article.

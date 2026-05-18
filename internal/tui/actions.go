@@ -10,12 +10,13 @@ import (
 
 func (m Model) pickOrDropFeed() (tea.Model, tea.Cmd) {
 	row, ok := m.selectedSourceRow()
-	if !ok || row.kind != sourceFeed {
+	if !ok || (m.pickedFeedID == 0 && row.kind != sourceFeed) {
 		m.status = "space picks up sources only; press enter to fold folders"
 		return m, nil
 	}
-	feed := m.feeds[row.feedIndex]
+	section, folder := m.selectedFolderTarget()
 	if m.pickedFeedID == 0 {
+		feed := m.feeds[row.feedIndex]
 		m.pickedFeedID = feed.ID
 		m.status = "picked source: " + feed.Title
 		return m, nil
@@ -26,11 +27,11 @@ func (m Model) pickOrDropFeed() (tea.Model, tea.Cmd) {
 		m.status = "picked source vanished"
 		return m, nil
 	}
-	if err := m.store.MoveFeed(picked.ID, feed.Section, feed.Folder); err != nil {
+	if err := m.store.MoveFeed(picked.ID, section, folder); err != nil {
 		m.err = err.Error()
 		return m, nil
 	}
-	m.status = "moved " + picked.Title + " to " + feed.Section + "/" + feed.Folder
+	m.status = "moved " + picked.Title + " to " + section + "/" + folder
 	m.pickedFeedID = 0
 	return m, loadFeedsCmd(m.store)
 }
@@ -188,13 +189,6 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	item := m.items[m.itemCursor]
-	if item.ID != 0 {
-		_ = m.store.MarkRead(item.ID)
-	}
-	m.items[m.itemCursor].ReadStatus = true
-	if item.FeedID != 0 {
-		m.itemCache[item.FeedID] = m.items
-	}
 	if strings.HasPrefix(strings.ToLower(item.Link), "gopher://") {
 		m.focus = focusArticle
 		m.rendering = true
@@ -205,6 +199,13 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	}
 	if item.EnclosureURL != "" && strings.HasPrefix(item.EnclosureType, "audio/") {
 		return m.playAudio(item)
+	}
+	if item.ID != 0 {
+		_ = m.store.MarkRead(item.ID)
+	}
+	m.items[m.itemCursor].ReadStatus = true
+	if item.FeedID != 0 {
+		m.itemCache[item.FeedID] = m.items
 	}
 	m.focus = focusArticle
 	m.stageScroll = 0

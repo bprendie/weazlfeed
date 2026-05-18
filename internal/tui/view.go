@@ -108,7 +108,7 @@ func (m Model) renderItems(width, height int) string {
 	var lines []string
 	lines = append(lines, m.styles.help.Render("last signal / newest first"))
 	for i, item := range m.visibleItems() {
-		badges := badges(item)
+		badges := badges(item, m.currentFeedIsPodcast())
 		itemIndex := m.itemScroll + i
 		var line string
 		if itemIndex == m.itemCursor {
@@ -170,12 +170,21 @@ func (m Model) footer() string {
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
-func badges(item store.Item) string {
+func badges(item store.Item, podcast bool) string {
 	var parts []string
-	if !item.ReadStatus {
+	if podcast {
+		switch {
+		case item.ReadStatus:
+			parts = append(parts, "[FINISHED]")
+		case item.PlayheadSeconds > 0:
+			parts = append(parts, "[LISTENING "+formatClock(item.PlayheadSeconds)+"]")
+		default:
+			parts = append(parts, "[NEW]")
+		}
+	} else if !item.ReadStatus {
 		parts = append(parts, "[UNREAD]")
 	}
-	if item.EnclosureURL != "" && strings.HasPrefix(item.EnclosureType, "audio/") {
+	if !podcast && item.EnclosureURL != "" && strings.HasPrefix(item.EnclosureType, "audio/") {
 		if item.PlayheadSeconds > 0 {
 			parts = append(parts, fmt.Sprintf("[AUDIO %s]", formatClock(item.PlayheadSeconds)))
 		} else {

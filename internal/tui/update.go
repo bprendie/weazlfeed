@@ -264,6 +264,10 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.seekAudio(-10)
 	case ".", ">":
 		m.seekAudio(30)
+	case "f":
+		if m.focus == focusItems {
+			return m.finishPodcastItem()
+		}
 	case "n":
 		if m.focus == focusFeeds {
 			m.folderInput = true
