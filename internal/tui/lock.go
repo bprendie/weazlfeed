@@ -21,7 +21,7 @@ func (m Model) lockView() string {
 	}
 	body := title + "\n\n" + m.input.View()
 	if m.unlocking {
-		body += "\n\n" + m.spinner.View() + " decrypting vault"
+		body += "\n\n" + gradientStatus(m.spinner.View()+" decrypting vault")
 	}
 	if m.err != "" {
 		body += "\n\n" + m.styles.error.Render(m.err)

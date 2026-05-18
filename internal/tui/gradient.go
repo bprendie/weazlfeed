@@ -51,6 +51,14 @@ func renderLogo(s string, width int) string {
 }
 
 func gradientLogo(s string) string {
+	return renderGradient(s, logoStops, true)
+}
+
+func gradientStatus(s string) string {
+	return renderGradient(s, logoStops, true)
+}
+
+func renderGradient(s string, stops []rgb, bold bool) string {
 	lines := strings.Split(s, "\n")
 	width := maxLineWidth(s)
 	var out strings.Builder
@@ -61,8 +69,8 @@ func gradientLogo(s string) string {
 				continue
 			}
 			t := float64(x) / float64(width-1)
-			color := sampleGradient(t, logoStops)
-			out.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Bold(true).Render(string(r)))
+			color := sampleGradient(t, stops)
+			out.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Bold(bold).Render(string(r)))
 		}
 		if y < len(lines)-1 {
 			out.WriteByte('\n')
