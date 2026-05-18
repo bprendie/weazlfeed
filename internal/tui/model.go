@@ -77,6 +77,9 @@ type Model struct {
 	playingURL       string
 	playingTitle     string
 	playingTotal     int
+	revealFeedID     int64
+	revealSection    string
+	revealFolder     string
 	refreshing       bool
 	rendering        bool
 	pickedFeedID     int64

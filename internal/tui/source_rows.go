@@ -132,6 +132,25 @@ func (m *Model) selectSourceRow(section, folder string) {
 	}
 }
 
+func (m *Model) revealPendingFeed() {
+	if m.revealFeedID == 0 {
+		return
+	}
+	_ = m.setFolderCollapsed(m.revealSection, m.revealFolder, false)
+	for i, row := range m.sourceRows() {
+		if row.kind == sourceFeed && m.feeds[row.feedIndex].ID == m.revealFeedID {
+			m.sourceCursor = i
+			m.feedCursor = row.feedIndex
+			m.focus = focusFeeds
+			m.ensureCursorVisible()
+			break
+		}
+	}
+	m.revealFeedID = 0
+	m.revealSection = ""
+	m.revealFolder = ""
+}
+
 func (m Model) folderCollapsed(section, folder string) bool {
 	for _, item := range m.folders {
 		if item.Section == section && item.Name == folder {

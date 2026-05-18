@@ -43,6 +43,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case feedsMsg:
 		m.feeds, m.err = msg.feeds, errText(msg.err)
 		m.folders = msg.folders
+		m.revealPendingFeed()
 		m.clamp()
 		if len(m.feeds) > 0 {
 			return m, prefetchItemsCmd(m.store, m.feeds, m.hideSludge)
