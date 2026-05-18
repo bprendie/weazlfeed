@@ -15,6 +15,14 @@ func (s *Store) UpsertItem(item Item) (bool, error) {
 		return false, err
 	}
 	n, err := res.RowsAffected()
+	if err != nil || n > 0 || item.DurationSeconds <= 0 {
+		return n > 0, err
+	}
+	_, err = s.db.Exec(`
+		UPDATE items
+		SET duration_seconds = ?
+		WHERE feed_id = ? AND guid = ? AND duration_seconds = 0
+	`, item.DurationSeconds, item.FeedID, item.GUID)
 	return n > 0, err
 }
 
