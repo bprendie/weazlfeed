@@ -11,6 +11,12 @@ import (
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width, m.height = size.Width, size.Height
+		if m.lockMode != lockOpen {
+			return m, nil
+		}
+	}
 	if m.lockMode != lockOpen {
 		return m.updateLock(msg)
 	}
@@ -18,8 +24,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateInput(msg)
 	}
 	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width, m.height = msg.Width, msg.Height
 	case tea.KeyMsg:
 		return m.updateKey(msg)
 	case tea.MouseMsg:
