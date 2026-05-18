@@ -88,6 +88,7 @@ type Model struct {
 	pickedFeedID     int64
 	lockMode         lockMode
 	pendingPass      string
+	unlocking        bool
 }
 
 func New(cfg config.Config, cfgPath string, vault *store.Store) Model {

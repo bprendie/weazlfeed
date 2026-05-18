@@ -76,3 +76,7 @@ type podcastSearchMsg struct {
 	results []podcast.Result
 	err     error
 }
+
+type lockMsg struct {
+	err error
+}

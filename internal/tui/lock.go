@@ -3,6 +3,7 @@ package tui
 import (
 	"strings"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -19,6 +20,9 @@ func (m Model) lockView() string {
 		title = "Confirm vault"
 	}
 	body := title + "\n\n" + m.input.View()
+	if m.unlocking {
+		body += "\n\n" + m.spinner.View() + " decrypting vault"
+	}
 	if m.err != "" {
 		body += "\n\n" + m.styles.error.Render(m.err)
 	}
@@ -28,6 +32,27 @@ func (m Model) lockView() string {
 }
 
 func (m Model) updateLock(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case spinner.TickMsg:
+		if !m.unlocking {
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+	case lockMsg:
+		m.unlocking = false
+		if msg.err != nil {
+			m.err = msg.err.Error()
+			m.input.SetValue("")
+			m.input.Focus()
+			return m, nil
+		}
+		return m.finishUnlock()
+	}
+	if m.unlocking {
+		return m, nil
+	}
 	key, ok := msg.(tea.KeyMsg)
 	if ok {
 		switch key.String() {
@@ -50,12 +75,11 @@ func (m Model) submitLock() (tea.Model, tea.Cmd) {
 	}
 	switch m.lockMode {
 	case lockUnlock:
-		if err := m.store.Unlock(password); err != nil {
-			m.err = err.Error()
-			m.input.SetValue("")
-			return m, nil
-		}
-		return m.finishUnlock()
+		m.unlocking = true
+		m.err = ""
+		m.input.Blur()
+		m.input.SetValue("")
+		return m, tea.Batch(unlockVaultCmd(m, password), m.spinner.Tick)
 	case lockCreate:
 		m.pendingPass = password
 		m.input.SetValue("")
@@ -69,11 +93,11 @@ func (m Model) submitLock() (tea.Model, tea.Cmd) {
 			m.input.SetValue("")
 			return m, nil
 		}
-		if err := m.store.CreateLock(password); err != nil {
-			m.err = err.Error()
-			return m, nil
-		}
-		return m.finishUnlock()
+		m.unlocking = true
+		m.err = ""
+		m.input.Blur()
+		m.input.SetValue("")
+		return m, tea.Batch(createVaultCmd(m, password), m.spinner.Tick)
 	default:
 		return m, nil
 	}
@@ -90,4 +114,16 @@ func (m Model) finishUnlock() (tea.Model, tea.Cmd) {
 	m.err = ""
 	m.status = "vault unlocked"
 	return m, seedFeedsCmd(m.store, m.cfg.Feeds)
+}
+
+func unlockVaultCmd(m Model, password string) tea.Cmd {
+	return func() tea.Msg {
+		return lockMsg{err: m.store.Unlock(password)}
+	}
+}
+
+func createVaultCmd(m Model, password string) tea.Cmd {
+	return func() tea.Msg {
+		return lockMsg{err: m.store.CreateLock(password)}
+	}
 }
