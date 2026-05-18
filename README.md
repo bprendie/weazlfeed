@@ -100,6 +100,7 @@ weazlfeed-setup
 | `ctrl+k` | Open the keybinding help screen |
 | `ctrl+a` | Ask the local model about the active item |
 | `ctrl+t` | Generate a 3-point tactical summary |
+| `ctrl+b` | Open the Bouncer rule desk |
 | `q` / `ctrl+c` | Quit |
 
 Mouse wheel scrolling works on the focused pane.
@@ -190,16 +191,39 @@ Setup supports:
 - `vllm`: queries `/v1/models`
 - `ollama`: queries `/api/tags`
 
-If the endpoint is offline, setup falls back to manual model entry.
+If the endpoint is offline, setup falls back to manual model entry. The config
+is written to `~/.config/weazlfeed/config.json` and setup preserves the current
+provider, base URL, model, and context window when you rerun it.
 
-AI features are tactical, not algorithmic:
+AI is wired as a local workbench, not a recommendation engine. It only touches
+the item you ask it to touch, and long articles are trimmed before they hit the
+model so a 20-token-per-second box does not make the TUI feel dead.
 
-- `ctrl+a`: ask a question about the active item
-- `ctrl+t`: extract the three most important technical points
-- Bouncer rules: mark SEO sludge during refresh when rules exist and the model
-  is reachable
+- `ctrl+t`: Tactical Triage extracts the three most important technical points
+  from the active article. Results are cached in the encrypted vault, so opening
+  the same summary again is instant.
+- `ctrl+a`: Interrogation asks a question about the active article. The answer,
+  prompt, source title, source URL, and article snapshot are saved as an
+  encrypted local artifact.
+- `Interrogations`: saved interrogations appear as their own section in
+  Sources. Open one like a feed item, continue the questioning with `ctrl+a`, or
+  delete it with `ctrl+d`.
+- Bouncer rules: local prompts that decide whether new items are sludge. When
+  rules exist and the model is reachable, refresh checks newly inserted items
+  and sets their sludge flag. Use `h` to hide or show flagged items.
 
-If the model is offline, the reader keeps working.
+During AI work, WeazlFeed shows the spinner phrases and token context bar from
+the WeazlChat flow so it is obvious when the local model is still thinking.
+
+The Bouncer desk opens with `ctrl+b`:
+
+- `n`: add a new sludge rule, such as `flag SEO filler with no primary source`
+- `d` or `ctrl+d`: delete the selected rule
+- `s`: scan the active article with the current rules
+- `esc` or `ctrl+b`: close the desk
+
+If the model is offline, the reader keeps working. AI commands fail closed
+instead of blocking the rest of the app.
 
 ## Audio
 
