@@ -257,8 +257,6 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.seekAudio(-10)
 	case ".", ">":
 		m.seekAudio(30)
-	case "s":
-		m.stopAudio()
 	case "n":
 		if m.focus == focusFeeds {
 			m.folderInput = true

@@ -45,7 +45,7 @@ Podcasts and audio
   space               Pause or resume audio when not picking/dropping a source.
   < or ,              Seek backward 10 seconds.
   > or .              Seek forward 30 seconds.
-  s or esc            Stop/close audio and save playhead.
+  esc                 Stop/close audio and save playhead.
 
 Reader and local AI
   enter on article    Render the article.
