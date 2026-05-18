@@ -21,7 +21,7 @@ func (m *Model) move(delta int) {
 			m.stageScroll = 0
 			m.items = nil
 			m.podcasts = nil
-			m.setArticle("")
+			m.clearArticle()
 		}
 	case focusItems:
 		m.itemCursor += delta
@@ -49,17 +49,6 @@ func (m Model) selectedFeedID() int64 {
 	return m.feeds[m.feedCursor].ID
 }
 
-func (m Model) prefetchSelectedFeedCmd() tea.Cmd {
-	feedID := m.selectedFeedID()
-	if feedID == 0 {
-		return nil
-	}
-	if _, ok := m.itemCache[feedID]; ok {
-		return nil
-	}
-	return loadItemsCmd(m.store, feedID, m.hideSludge)
-}
-
 func (m *Model) useCachedItems(feedID int64) bool {
 	items, ok := m.itemCache[feedID]
 	if !ok {
@@ -71,7 +60,7 @@ func (m *Model) useCachedItems(feedID int64) bool {
 	m.itemScroll = 0
 	m.stageScroll = 0
 	m.clamp()
-	m.showItemHint()
+	m.clearArticle()
 	return true
 }
 
@@ -350,15 +339,20 @@ func (m *Model) renderArticle() {
 
 func (m *Model) showItemHint() {
 	if len(m.items) == 0 {
-		m.setArticle("No items for this feed. Press r to refresh.")
+		m.clearArticle()
 		return
 	}
-	m.setArticle("Select an item and press enter to open it.")
+	m.clearArticle()
 }
 
 func (m *Model) setArticle(text string) {
 	m.rawArticle = text
 	m.article = m.renderMarkdown(text)
+}
+
+func (m *Model) clearArticle() {
+	m.rawArticle = ""
+	m.article = ""
 }
 
 func (m *Model) rerenderArticle() {

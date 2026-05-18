@@ -53,6 +53,20 @@ func loadItemsCmd(vault *store.Store, feedID int64, hide bool) tea.Cmd {
 	}
 }
 
+func prefetchItemsCmd(vault *store.Store, feeds []store.Feed, hide bool) tea.Cmd {
+	return func() tea.Msg {
+		cache := make(map[int64][]store.Item, len(feeds))
+		for _, feed := range feeds {
+			items, err := vault.Items(feed.ID, hide)
+			if err != nil {
+				return allItemsMsg{err: err}
+			}
+			cache[feed.ID] = items
+		}
+		return allItemsMsg{itemsByFeed: cache}
+	}
+}
+
 func refreshAllCmd(vault *store.Store, ai llm.Client) tea.Cmd {
 	return func() tea.Msg {
 		feeds, err := vault.Feeds()

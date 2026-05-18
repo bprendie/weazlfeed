@@ -30,7 +30,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.feeds, m.err = msg.feeds, errText(msg.err)
 		m.folders = msg.folders
 		if len(m.feeds) > 0 {
-			return m, m.prefetchSelectedFeedCmd()
+			return m, prefetchItemsCmd(m.store, m.feeds, m.hideSludge)
 		}
 	case itemsMsg:
 		m.err = errText(msg.err)
@@ -40,7 +40,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.items = msg.items
 				m.podcasts = nil
 				m.clamp()
-				m.showItemHint()
+				m.clearArticle()
+			}
+		}
+	case allItemsMsg:
+		m.err = errText(msg.err)
+		if msg.err == nil {
+			m.itemCache = msg.itemsByFeed
+			if m.focus == focusItems {
+				if items, ok := m.itemCache[m.selectedFeedID()]; ok {
+					m.items = items
+					m.podcasts = nil
+					m.clamp()
+					m.clearArticle()
+				}
 			}
 		}
 	case fetchMsg:
@@ -97,17 +110,9 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m.retreat()
 	case "j", "down":
-		wasFeeds := m.focus == focusFeeds
 		m.move(1)
-		if wasFeeds {
-			return m, m.prefetchSelectedFeedCmd()
-		}
 	case "k", "up":
-		wasFeeds := m.focus == focusFeeds
 		m.move(-1)
-		if wasFeeds {
-			return m, m.prefetchSelectedFeedCmd()
-		}
 	case "pgdown":
 		m.page(1)
 	case "pgup":
@@ -132,7 +137,7 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.hideSludge = !m.hideSludge
 		m.itemCache = map[int64][]store.Item{}
 		if len(m.feeds) > 0 {
-			return m, loadItemsCmd(m.store, m.feeds[m.feedCursor].ID, m.hideSludge)
+			return m, prefetchItemsCmd(m.store, m.feeds, m.hideSludge)
 		}
 	case "enter":
 		return m.activate()

@@ -18,6 +18,11 @@ type itemsMsg struct {
 	err    error
 }
 
+type allItemsMsg struct {
+	itemsByFeed map[int64][]store.Item
+	err         error
+}
+
 type fetchMsg struct {
 	checked int
 	added   int
