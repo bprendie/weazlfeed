@@ -174,8 +174,10 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 			}
 			m.focus = focusArticle
 			m.stageScroll = 0
-			m.showInterrogation(m.interrogations[row.aiIndex])
-			return m, nil
+			m.rendering = true
+			m.clearArticle()
+			m.status = m.spinner.View() + " opening interrogation"
+			return m, tea.Batch(renderInterrogationCmd(m.interrogations[row.aiIndex], m.readerWidth()), m.spinner.Tick)
 		}
 		if row.kind != sourceFeed {
 			return m, nil

@@ -34,6 +34,16 @@ func (m *Model) showAIOutput(msg aiMsg) {
 }
 
 func (m *Model) showInterrogation(out store.AIOutput) {
+	body := interrogationBody(out)
+	m.rawArticle = body
+	m.article = m.renderMarkdown(body)
+	m.savedRawArticle = ""
+	m.savedArticle = ""
+	m.articleMode = articleAsk
+	m.status = "saved interrogation"
+}
+
+func interrogationBody(out store.AIOutput) string {
 	body := "# INTERROGATION ROOM\n\n"
 	body += "**Article:** " + firstText(out.ItemTitle, "saved article") + "\n\n"
 	if out.Prompt != "" {
@@ -43,12 +53,7 @@ func (m *Model) showInterrogation(out store.AIOutput) {
 	if out.ItemContent != "" {
 		body += "\n\n---\n\n## Article Snapshot\n\n" + out.ItemContent
 	}
-	m.rawArticle = body
-	m.article = m.renderMarkdown(body)
-	m.savedRawArticle = ""
-	m.savedArticle = ""
-	m.articleMode = articleAsk
-	m.status = "saved interrogation"
+	return body
 }
 
 func (m *Model) restoreArticle() {

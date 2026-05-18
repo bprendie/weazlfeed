@@ -343,6 +343,13 @@ func renderReaderCmd(vault *store.Store, item store.Item, width int) tea.Cmd {
 	}
 }
 
+func renderInterrogationCmd(out store.AIOutput, width int) tea.Cmd {
+	return func() tea.Msg {
+		text := interrogationBody(out)
+		return interrogationMsg{raw: text, rendered: renderMarkdownText(text, width)}
+	}
+}
+
 func playheadTickCmd() tea.Cmd {
 	return tea.Tick(5*time.Second, func(time.Time) tea.Msg {
 		return playheadTickMsg{}

@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"strings"
 	"time"
 
 	"github.com/bprendie/weazlfeed/internal/audio"
@@ -166,6 +165,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					break
 				}
 			}
+		}
+	case interrogationMsg:
+		m.rendering = false
+		m.err = errText(msg.err)
+		if msg.err == nil {
+			m.rawArticle = msg.raw
+			m.article = msg.rendered
+			m.savedRawArticle = ""
+			m.savedArticle = ""
+			m.articleMode = articleAsk
+			m.stageScroll = 0
+			m.status = "saved interrogation"
 		}
 	case podcastSearchMsg:
 		if !m.podcastInput {
@@ -352,48 +363,4 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
-}
-
-func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if key, ok := msg.(tea.KeyMsg); ok {
-		switch key.String() {
-		case "esc", "ctrl+c":
-			m.asking = false
-			m.folderInput = false
-			m.urlInput = false
-			m.input.Blur()
-			m.input.SetValue("")
-			m.input.Prompt = "interrogate> "
-			return m, nil
-		case "enter":
-			question := strings.TrimSpace(m.input.Value())
-			m.asking = false
-			folderInput := m.folderInput
-			urlInput := m.urlInput
-			m.folderInput = false
-			m.urlInput = false
-			m.input.Blur()
-			m.input.SetValue("")
-			m.input.Prompt = "interrogate> "
-			if folderInput {
-				return m.createFolder(question)
-			}
-			if urlInput {
-				return m.addURL(question)
-			}
-			if question != "" && len(m.items) > 0 {
-				m.aiWorking = true
-				m.aiAction = "interrogating article"
-				m.aiStartedAt = time.Now()
-				m.aiReqIn = estimateTokens(m.items[m.itemCursor].ContentMarkdown) + estimateTokens(question)
-				m.aiReqOut = 0
-				m.status = "interrogating active article"
-				return m, tea.Batch(aiCmd(m.store, m.ai, "ask", m.items[m.itemCursor], question), m.spinner.Tick, aiTickCmd())
-			}
-			return m, nil
-		}
-	}
-	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-	return m, cmd
 }

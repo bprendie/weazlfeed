@@ -82,6 +82,12 @@ type readerMsg struct {
 	err      error
 }
 
+type interrogationMsg struct {
+	raw      string
+	rendered string
+	err      error
+}
+
 type podcastSearchMsg struct {
 	results []podcast.Result
 	err     error

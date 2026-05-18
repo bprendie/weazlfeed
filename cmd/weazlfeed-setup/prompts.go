@@ -43,13 +43,17 @@ func askChoice(reader *bufio.Reader, label string, choices []string, def string)
 	}
 }
 
-func askModel(reader *bufio.Reader, models []string) string {
+func askModel(reader *bufio.Reader, models []string, def string) string {
 	for {
 		fmt.Println("Models:")
 		for i, model := range models {
 			fmt.Printf("  %d) %s\n", i+1, model)
 		}
-		answer := askString(reader, "Select model", "1")
+		defaultChoice := "1"
+		if def != "" && contains(models, def) {
+			defaultChoice = def
+		}
+		answer := askString(reader, "Select model", defaultChoice)
 		n, err := strconv.Atoi(answer)
 		if err == nil && n >= 1 && n <= len(models) {
 			return models[n-1]
@@ -61,7 +65,10 @@ func askModel(reader *bufio.Reader, models []string) string {
 	}
 }
 
-func askContextWindow(reader *bufio.Reader) int {
+func askContextWindow(reader *bufio.Reader, def int) int {
+	if def <= 0 {
+		def = 32768
+	}
 	choices := []struct {
 		Name   string
 		Tokens int
@@ -81,9 +88,16 @@ func askContextWindow(reader *bufio.Reader) int {
 			}
 			fmt.Println(label)
 		}
-		answer := askString(reader, "Select", "large")
+		defaultChoice := "large"
+		for _, choice := range choices {
+			if choice.Tokens == def {
+				defaultChoice = choice.Name
+				break
+			}
+		}
+		answer := askString(reader, "Select", defaultChoice)
 		if answer == "" {
-			return 32768
+			return def
 		}
 		if n, err := strconv.Atoi(answer); err == nil && n >= 1 && n <= len(choices) {
 			return choices[n-1].Tokens
