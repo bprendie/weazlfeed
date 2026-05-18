@@ -32,6 +32,7 @@ The installer builds:
 
 - `weazlfeed`
 - `weazlfeed-setup`
+- `weazlfeed-import`
 
 Both are installed to:
 
@@ -94,6 +95,20 @@ On first run, WeazlFeed seeds a starter deck:
 
 Feeds live in SQLite and are also seeded from config. The default config is
 created at first launch.
+
+An optional OPML file of known working feeds lives at:
+
+```text
+examples/known-working-feeds.opml
+```
+
+It is not imported by default.
+
+Import it with:
+
+```sh
+weazlfeed-import examples/known-working-feeds.opml
+```
 
 ## Gopher
 

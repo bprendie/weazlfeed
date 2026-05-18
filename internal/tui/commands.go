@@ -51,70 +51,84 @@ func loadItemsCmd(vault *store.Store, feedID int64, hide bool) tea.Cmd {
 	}
 }
 
-func refreshCmd(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Cmd {
+func refreshAllCmd(vault *store.Store, ai llm.Client) tea.Cmd {
 	return func() tea.Msg {
-		client := feed.NewClient()
-		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
-		defer cancel()
-		added := 0
-		failed := 0
-		rules, err := vault.Rules()
+		feeds, err := vault.Feeds()
 		if err != nil {
 			return fetchMsg{err: err}
 		}
-		rulePrompts := make([]string, 0, len(rules))
-		for _, rule := range rules {
-			rulePrompts = append(rulePrompts, rule.Prompt)
+		return refresh(vault, feeds, ai)
+	}
+}
+
+func refreshCmd(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Cmd {
+	return func() tea.Msg {
+		return refresh(vault, feeds, ai)
+	}
+}
+
+func refresh(vault *store.Store, feeds []store.Feed, ai llm.Client) tea.Msg {
+	client := feed.NewClient()
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	added := 0
+	failed := 0
+	rules, err := vault.Rules()
+	if err != nil {
+		return fetchMsg{err: err}
+	}
+	rulePrompts := make([]string, 0, len(rules))
+	for _, rule := range rules {
+		rulePrompts = append(rulePrompts, rule.Prompt)
+	}
+	useBouncer := len(rulePrompts) > 0 && ai.Available(ctx)
+	for _, src := range feeds {
+		parsed, err := client.Fetch(ctx, src.URL, src.ETag, src.LastModified)
+		if err != nil {
+			_ = vault.SetFeedStatus(src.ID, 0, "", "", err.Error())
+			failed++
+			continue
 		}
-		useBouncer := len(rulePrompts) > 0 && ai.Available(ctx)
-		for _, src := range feeds {
-			parsed, err := client.Fetch(ctx, src.URL, src.ETag, src.LastModified)
-			if err != nil {
-				_ = vault.SetFeedStatus(src.ID, 0, "", "", err.Error())
-				failed++
-				continue
+		_ = vault.SetFeedStatus(src.ID, parsed.Status, parsed.ETag, parsed.LastModified, "")
+		if parsed.NotModified {
+			_ = vault.MarkFetched(src.ID, time.Now())
+			continue
+		}
+		title := firstText(parsed.Title, src.Title, src.URL)
+		feedID, err := vault.UpsertFeed(title, src.URL, parsed.Type, src.Section, src.Folder, src.Category)
+		if err != nil {
+			return fetchMsg{added: added, failed: failed, err: err}
+		}
+		for _, parsedItem := range parsed.Items {
+			item := store.Item{
+				FeedID:          feedID,
+				GUID:            parsedItem.GUID,
+				Title:           firstText(parsedItem.Title, "untitled"),
+				Link:            parsedItem.Link,
+				PublishedAt:     parsedItem.PublishedAt,
+				ContentHTML:     parsedItem.ContentHTML,
+				ContentMarkdown: parsedItem.ContentMarkdown,
+				EnclosureURL:    parsedItem.EnclosureURL,
+				EnclosureType:   parsedItem.EnclosureType,
 			}
-			_ = vault.SetFeedStatus(src.ID, parsed.Status, parsed.ETag, parsed.LastModified, "")
-			if parsed.NotModified {
-				_ = vault.MarkFetched(src.ID, time.Now())
-				continue
+			if useBouncer {
+				flagged, err := ai.FlagSludge(ctx, item.ContentMarkdown, rulePrompts)
+				if err == nil {
+					item.SludgeFlag = flagged
+					item.SludgeChecked = true
+				}
 			}
-			title := firstText(parsed.Title, src.Title, src.URL)
-			feedID, err := vault.UpsertFeed(title, src.URL, parsed.Type, src.Section, src.Folder, src.Category)
+			ok, err := vault.UpsertItem(item)
 			if err != nil {
 				return fetchMsg{added: added, failed: failed, err: err}
 			}
-			for _, parsedItem := range parsed.Items {
-				item := store.Item{
-					FeedID:          feedID,
-					GUID:            parsedItem.GUID,
-					Title:           firstText(parsedItem.Title, "untitled"),
-					Link:            parsedItem.Link,
-					PublishedAt:     parsedItem.PublishedAt,
-					ContentHTML:     parsedItem.ContentHTML,
-					ContentMarkdown: parsedItem.ContentMarkdown,
-					EnclosureURL:    parsedItem.EnclosureURL,
-					EnclosureType:   parsedItem.EnclosureType,
-				}
-				if useBouncer {
-					flagged, err := ai.FlagSludge(ctx, item.ContentMarkdown, rulePrompts)
-					if err == nil {
-						item.SludgeFlag = flagged
-						item.SludgeChecked = true
-					}
-				}
-				ok, err := vault.UpsertItem(item)
-				if err != nil {
-					return fetchMsg{added: added, failed: failed, err: err}
-				}
-				if ok {
-					added++
-				}
+			if ok {
+				added++
 			}
-			_ = vault.MarkFetched(feedID, time.Now())
 		}
-		return fetchMsg{added: added, failed: failed}
+		_ = vault.MarkFetched(feedID, time.Now())
 	}
+	return fetchMsg{added: added, failed: failed}
 }
 
 func aiCmd(ai llm.Client, mode string, item store.Item, question string) tea.Cmd {

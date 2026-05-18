@@ -90,12 +90,12 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.end()
 	case "R":
 		m.refreshing = true
-		m.status = "refreshing all sources"
-		return m, tea.Batch(refreshCmd(m.store, m.feeds, m.ai), m.spinner.Tick)
+		m.status = m.spinner.View() + " refreshing all sources"
+		return m, tea.Batch(refreshAllCmd(m.store, m.ai), m.spinner.Tick)
 	case "r":
 		if len(m.feeds) > 0 {
 			m.refreshing = true
-			m.status = "refreshing " + m.feeds[m.feedCursor].Title
+			m.status = m.spinner.View() + " refreshing " + m.feeds[m.feedCursor].Title
 			return m, tea.Batch(refreshCmd(m.store, []store.Feed{m.feeds[m.feedCursor]}, m.ai), m.spinner.Tick)
 		}
 	case "h":

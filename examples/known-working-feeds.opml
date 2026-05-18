@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>WeazlFeed Known Working Feeds</title>
+  </head>
+  <body>
+    <outline text="News">
+      <outline text="Local">
+        <outline text="WHDH 7News" title="WHDH 7News" type="rss" xmlUrl="https://whdh.com/feed/" />
+        <outline text="WMUR Top Stories" title="WMUR Top Stories" type="rss" xmlUrl="https://www.wmur.com/topstories-rss" />
+        <outline text="Billy Penn" title="Billy Penn" type="rss" xmlUrl="https://billypenn.com/feed/" />
+        <outline text="PhillyVoice" title="PhillyVoice" type="rss" xmlUrl="https://www.phillyvoice.com/feed/" />
+      </outline>
+      <outline text="Politics">
+        <outline text="Raw Story" title="Raw Story" type="rss" xmlUrl="https://www.rawstory.com/feeds/feed.rss" />
+        <outline text="Breitbart" title="Breitbart" type="rss" xmlUrl="http://feeds.feedburner.com/breitbart" />
+        <outline text="The Bulwark" title="The Bulwark" type="rss" xmlUrl="https://www.thebulwark.com/feed" />
+        <outline text="Political Wire" title="Political Wire" type="rss" xmlUrl="https://politicalwire.com/feed/" />
+        <outline text="Rebel News" title="Rebel News" type="rss" xmlUrl="https://www.rebelnews.com/news.rss" />
+        <outline text="True News Blog" title="True News Blog" type="rss" xmlUrl="https://truenewsblog.com/feed/" />
+      </outline>
+      <outline text="World">
+        <outline text="AP via FeedX" title="AP via FeedX" type="rss" xmlUrl="https://feedx.net/rss/ap.xml" />
+        <outline text="Reuters World via OpenRSS" title="Reuters World via OpenRSS" type="rss" xmlUrl="https://openrss.org/www.reuters.com/world/" />
+        <outline text="Time" title="Time" type="rss" xmlUrl="https://time.com/feed/" />
+      </outline>
+      <outline text="Media">
+        <outline text="Where's Your Ed At" title="Where's Your Ed At" type="rss" xmlUrl="https://www.wheresyoured.at/rss/" />
+        <outline text="404 Media" title="404 Media" type="rss" xmlUrl="https://www.404media.co/rss/" />
+        <outline text="Medium Blog" title="Medium Blog" type="rss" xmlUrl="https://blog.medium.com/feed" />
+      </outline>
+      <outline text="Music">
+        <outline text="The Burning Ear" title="The Burning Ear" type="rss" xmlUrl="https://www.theburningear.com/feed/" />
+      </outline>
+    </outline>
+    <outline text="News">
+      <outline text="AI">
+        <outline text="AWS Machine Learning Blog" title="AWS Machine Learning Blog" type="rss" xmlUrl="https://aws.amazon.com/blogs/machine-learning/feed/" />
+        <outline text="MIT News AI" title="MIT News AI" type="rss" xmlUrl="http://news.mit.edu/rss/topic/artificial-intelligence2" />
+        <outline text="AI Snake Oil" title="AI Snake Oil" type="rss" xmlUrl="https://www.aisnakeoil.com/feed" />
+      </outline>
+    </outline>
+    <outline text="News">
+      <outline text="Substack">
+        <outline text="Lunduke Journal" title="Lunduke Journal" type="rss" xmlUrl="https://lunduke.substack.com/feed" />
+        <outline text="Natural Selections" title="Natural Selections" type="rss" xmlUrl="https://naturalselections.substack.com/feed" />
+        <outline text="Eclectachrome" title="Eclectachrome" type="rss" xmlUrl="https://eclectachrome.substack.com/feed" />
+        <outline text="Karlyn Borysenko" title="Karlyn Borysenko" type="rss" xmlUrl="https://karlyn.substack.com/feed" />
+        <outline text="New Discourses" title="New Discourses" type="rss" xmlUrl="https://newdiscourses.substack.com/feed" />
+      </outline>
+    </outline>
+  </body>
+</opml>
