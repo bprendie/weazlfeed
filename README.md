@@ -16,7 +16,8 @@ No browser tabs. No walled gardens. Just the raw feed on the bare metal.
 - Preloaded feed categories for tech, world news, sports, music, and Gopher.
 - Podcast/audio enclosure playback through `mpv`.
 - Playback resume with playhead checkpoints written during playback.
-- `ffmpeg`-powered terminal EQ visualizer when audio is active.
+- `ffmpeg`-powered Harmonica EQ visualizer when audio is active.
+- Podcast directory search inside the TUI, no paid API key required.
 - Local LLM integration for article Q&A, tactical summaries, and sludge rules.
 - Three-pane BBS-style TUI with focused pane expansion.
 
@@ -80,18 +81,24 @@ weazlfeed-setup
 | `Home` / `End` | Jump within the focused pane |
 | `tab` | Manually switch focus and expand that pane |
 | `enter` | Open source, read item, dial Gopher target, or play audio |
-| `esc` | Move back one pane |
-| `space` | Pause/resume audio |
-| `s` | Stop audio |
-| `p` | Search podcasts |
+| `esc` / `left` | Move back one pane, or stop/close active audio |
+| `space` | Pick/drop sources in Sources; pause/resume audio elsewhere |
+| `<` / `>` | Seek active audio back 10 seconds / forward 30 seconds |
+| `p` | Open the podcast directory |
+| `a` | Add a feed or Gopher URL to the selected folder |
+| `n` | Create a folder in the selected section |
+| `f` | Mark selected podcast episode finished |
+| `ctrl+d` | Delete selected source after confirmation |
 | `r` | Refresh selected source |
 | `R` | Refresh all sources |
 | `h` | Hide/show sludge-flagged items |
+| `ctrl+k` | Open the keybinding help screen |
 | `ctrl+a` | Ask the local model about the active item |
 | `ctrl+t` | Generate a 3-point tactical summary |
 | `q` / `ctrl+c` | Quit |
 
 Mouse wheel scrolling works on the focused pane.
+Press `ctrl+k` in the TUI for the full command deck.
 
 ## Feeds
 
@@ -104,7 +111,16 @@ On first run, WeazlFeed seeds a starter deck:
 - `GOPHER`: Floodgap Gopher, SDF Gopher
 
 Feeds live in SQLite and are also seeded from config. The default config is
-created at first launch.
+created at first launch. User moves stick: seed refreshes do not overwrite your
+folder organization.
+
+Inside Sources:
+
+- `space` picks up the selected source; move to a folder; `space` drops it.
+- `n` creates a folder under the selected section.
+- `a` opens a centered URL prompt. `gopher://` URLs route to Gopher. Audio feeds
+  route to Podcasts.
+- `ctrl+d` opens a delete confirmation for the selected source.
 
 Import OPML feed lists with:
 
@@ -120,8 +136,9 @@ weazlfeed-podcast-search -add 1 "darknet diaries"
 ```
 
 Added podcast feeds land under `Podcasts/Search`.
-Inside the TUI, press `p`, enter a query, select a result, and press `enter`
-to subscribe.
+Inside the TUI, press `p` to open the podcast directory. Search for a show,
+select a result, and press `enter` or `a` to subscribe it into the selected
+Podcasts folder. The new subscription refreshes immediately and jumps into view.
 
 Refresh all feeds from the shell with a per-feed status report:
 
@@ -151,9 +168,9 @@ gopher://sdf.org/
 gopher://gopher.floodgap.com/
 ```
 
-Directory menus become stream items. Text pages render in the Stage pane.
+Directory menus become nested item lists. Text pages render in the Reader pane.
 Selecting a Gopher item with `enter` dials the target and renders the next menu
-or page.
+or page. `esc` or `left` walks back through the Gopher menu stack.
 
 ## Local AI
 
@@ -175,13 +192,32 @@ If the model is offline, the reader keeps working.
 
 ## Audio
 
-Items with audio enclosures can be played with `enter`.
+Items with audio enclosures can be played with `enter`. Audio opens a centered
+playback window with the current timestamp, total duration when known, and the
+live EQ.
 
 WeazlFeed starts `mpv` directly, without heavyweight bindings. During playback,
 it periodically saves `playhead_seconds` to SQLite so long podcasts can resume
 close to where they stopped, even after a bad exit.
 
-If `ffmpeg` is available, the footer shows a live terminal EQ.
+If `ffmpeg` is available, the EQ is driven by a real decoded audio meter. No
+fake bars. The Harmonica spring renderer just makes the real signal move like it
+has weight.
+
+Audio controls:
+
+- `space`: pause/resume
+- `<`: back 10 seconds
+- `>`: forward 30 seconds
+- `esc`: stop/close and save the playhead
+
+Podcast episodes use podcast states instead of article states:
+
+- `NEW`: untouched
+- `LISTENING`: has a saved playhead
+- `FINISHED`: marked complete
+
+Press `f` on a podcast episode to mark it finished.
 
 ## Files
 
