@@ -73,8 +73,8 @@ weazlfeed-setup
 | `j` / `k` | Move through the focused pane |
 | `PgUp` / `PgDn` | Page the focused pane |
 | `Home` / `End` | Jump within the focused pane |
-| `tab` | Switch focus and expand that pane |
-| `enter` | Read item, dial Gopher target, or play audio |
+| `tab` | Manually switch focus and expand that pane |
+| `enter` | Open source, read item, dial Gopher target, or play audio |
 | `space` | Pause/resume audio |
 | `s` | Stop audio |
 | `p` | Search podcasts |

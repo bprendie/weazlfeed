@@ -174,6 +174,11 @@ func (m *Model) scrollFocused(delta int) {
 func (m Model) activate() (tea.Model, tea.Cmd) {
 	if m.focus == focusFeeds && len(m.feeds) > 0 {
 		m.podcasts = nil
+		m.focus = focusItems
+		m.itemCursor = 0
+		m.itemScroll = 0
+		m.stageScroll = 0
+		m.status = "opened source: " + m.feeds[m.feedCursor].Title
 		return m, loadItemsCmd(m.store, m.feeds[m.feedCursor].ID, m.hideSludge)
 	}
 	if m.focus == focusItems && m.podcastMode() {
@@ -185,6 +190,7 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	item := m.items[m.itemCursor]
 	_ = m.store.MarkRead(item.ID)
 	if strings.HasPrefix(strings.ToLower(item.Link), "gopher://") {
+		m.focus = focusArticle
 		m.status = "dialing gopher target"
 		return m, gopherArticleCmd(item.Link)
 	}
@@ -204,6 +210,8 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 		}
 		return m, tick
 	}
+	m.focus = focusArticle
+	m.stageScroll = 0
 	m.renderArticle()
 	return m, loadItemsCmd(m.store, item.FeedID, m.hideSludge)
 }
