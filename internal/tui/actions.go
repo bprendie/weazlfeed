@@ -113,7 +113,9 @@ func (m *Model) page(delta int) {
 	}
 	m.clamp()
 	m.ensureCursorVisible()
-	m.clampScrolls()
+	if m.focus == focusArticle {
+		m.clampScrolls()
+	}
 }
 
 func (m *Model) home() {
@@ -138,7 +140,9 @@ func (m *Model) end() {
 	}
 	m.clamp()
 	m.ensureCursorVisible()
-	m.clampScrolls()
+	if m.focus == focusArticle {
+		m.clampScrolls()
+	}
 }
 
 func (m *Model) updateMouse(msg tea.MouseMsg) {
@@ -161,7 +165,9 @@ func (m *Model) scrollFocused(delta int) {
 	}
 	m.clamp()
 	m.ensureCursorVisible()
-	m.clampScrolls()
+	if m.focus == focusArticle {
+		m.clampScrolls()
+	}
 }
 
 func (m Model) activate() (tea.Model, tea.Cmd) {
@@ -182,6 +188,16 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	}
 	item := m.items[m.itemCursor]
 	_ = m.store.MarkRead(item.ID)
+	m.items[m.itemCursor].ReadStatus = true
+	if item.ContentMarkdown == "" && item.ContentHTML == "" {
+		full, err := m.store.Item(item.ID)
+		if err != nil {
+			m.err = err.Error()
+			return m, nil
+		}
+		m.items[m.itemCursor] = full
+		item = full
+	}
 	if strings.HasPrefix(strings.ToLower(item.Link), "gopher://") {
 		m.focus = focusArticle
 		m.status = "dialing gopher target"
@@ -206,7 +222,7 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	m.focus = focusArticle
 	m.stageScroll = 0
 	m.renderArticle()
-	return m, loadItemsCmd(m.store, item.FeedID, m.hideSludge)
+	return m, nil
 }
 
 func (m *Model) stopAudio() {
@@ -247,26 +263,36 @@ func (m *Model) clamp() {
 func (m *Model) ensureCursorVisible() {
 	_, bodyHeight := m.layout()
 	visible := max(1, bodyHeight-3)
-	if m.feedCursor < m.feedScroll {
-		m.feedScroll = m.feedCursor
+	switch m.focus {
+	case focusFeeds:
+		if m.feedCursor < m.feedScroll {
+			m.feedScroll = m.feedCursor
+		}
+		if m.feedCursor >= m.feedScroll+visible {
+			m.feedScroll = m.feedCursor - visible + 1
+		}
+	case focusItems:
+		if m.itemCursor < m.itemScroll {
+			m.itemScroll = m.itemCursor
+		}
+		if m.itemCursor >= m.itemScroll+visible {
+			m.itemScroll = m.itemCursor - visible + 1
+		}
 	}
-	if m.feedCursor >= m.feedScroll+visible {
-		m.feedScroll = m.feedCursor - visible + 1
-	}
-	if m.itemCursor < m.itemScroll {
-		m.itemScroll = m.itemCursor
-	}
-	if m.itemCursor >= m.itemScroll+visible {
-		m.itemScroll = m.itemCursor - visible + 1
-	}
-	m.clampScrolls()
+	m.clampListScrolls()
 }
 
-func (m *Model) clampScrolls() {
+func (m *Model) clampListScrolls() {
 	_, bodyHeight := m.layout()
 	visible := max(1, bodyHeight-3)
 	m.feedScroll = clampInt(m.feedScroll, 0, max(0, len(m.feeds)-visible))
 	m.itemScroll = clampInt(m.itemScroll, 0, max(0, m.itemTargetCount()-visible))
+}
+
+func (m *Model) clampScrolls() {
+	m.clampListScrolls()
+	_, bodyHeight := m.layout()
+	visible := max(1, bodyHeight-3)
 	m.stageScroll = clampInt(m.stageScroll, 0, max(0, m.stageLineCount()-visible))
 }
 

@@ -20,7 +20,7 @@ func (s *Store) UpsertItem(item Item) (bool, error) {
 
 func (s *Store) Items(feedID int64, hideSludge bool) ([]Item, error) {
 	query := `
-		SELECT id, feed_id, guid, title, link, published_at, content_html, content_markdown,
+		SELECT id, feed_id, guid, title, link, published_at,
 			enclosure_url, enclosure_type, read_status, sludge_flag, sludge_checked, playhead_seconds
 		FROM items
 		WHERE feed_id = ?`
@@ -35,13 +35,23 @@ func (s *Store) Items(feedID int64, hideSludge bool) ([]Item, error) {
 	defer rows.Close()
 	var items []Item
 	for rows.Next() {
-		item, err := scanItem(rows)
+		item, err := scanItemSummary(rows)
 		if err != nil {
 			return nil, err
 		}
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func (s *Store) Item(id int64) (Item, error) {
+	row := s.db.QueryRow(`
+		SELECT id, feed_id, guid, title, link, published_at, content_html, content_markdown,
+			enclosure_url, enclosure_type, read_status, sludge_flag, sludge_checked, playhead_seconds
+		FROM items
+		WHERE id = ?
+	`, id)
+	return scanItem(row)
 }
 
 func (s *Store) ItemCount(feedID int64) (int, error) {
@@ -96,6 +106,19 @@ func scanItem(row scanner) (Item, error) {
 	err := row.Scan(&item.ID, &item.FeedID, &item.GUID, &item.Title, &item.Link, &published,
 		&item.ContentHTML, &item.ContentMarkdown, &item.EnclosureURL, &item.EnclosureType,
 		&read, &sludge, &checked, &item.PlayheadSeconds)
+	item.PublishedAt = parseTime(published)
+	item.ReadStatus = read == 1
+	item.SludgeFlag = sludge == 1
+	item.SludgeChecked = checked == 1
+	return item, err
+}
+
+func scanItemSummary(row scanner) (Item, error) {
+	var item Item
+	var published sql.NullString
+	var read, sludge, checked int
+	err := row.Scan(&item.ID, &item.FeedID, &item.GUID, &item.Title, &item.Link, &published,
+		&item.EnclosureURL, &item.EnclosureType, &read, &sludge, &checked, &item.PlayheadSeconds)
 	item.PublishedAt = parseTime(published)
 	item.ReadStatus = read == 1
 	item.SludgeFlag = sludge == 1
