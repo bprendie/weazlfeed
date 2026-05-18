@@ -1,0 +1,100 @@
+package tui
+
+import tea "github.com/charmbracelet/bubbletea"
+
+func (m *Model) move(delta int) {
+	switch m.focus {
+	case focusFeeds:
+		indices := m.visibleFeedIndices()
+		if len(indices) == 0 {
+			return
+		}
+		pos := 0
+		for i, index := range indices {
+			if index == m.feedCursor {
+				pos = i
+				break
+			}
+		}
+		pos = clampInt(pos+delta, 0, len(indices)-1)
+		m.feedCursor = indices[pos]
+		m.clamp()
+		m.ensureCursorVisible()
+		m.itemCursor = 0
+		m.itemScroll = 0
+		m.stageScroll = 0
+		m.items = nil
+		m.podcasts = nil
+		m.clearArticle()
+	case focusItems:
+		m.itemCursor += delta
+		m.clamp()
+		m.ensureCursorVisible()
+	case focusArticle:
+		m.stageScroll += delta
+		m.clampScrolls()
+	}
+}
+
+func (m *Model) retreat() {
+	if m.focus > focusFeeds {
+		m.focus--
+	}
+	m.status = "back"
+	m.clamp()
+	m.ensureCursorVisible()
+}
+
+func (m Model) toggleCurrentFolder(collapsed bool) (tea.Model, tea.Cmd) {
+	if len(m.feeds) == 0 {
+		return m, nil
+	}
+	current := m.feedCursor
+	feed := m.feeds[m.feedCursor]
+	section := firstText(feed.Section, sectionFromFeed(feed))
+	folder := firstText(feed.Folder, folderFromFeed(feed))
+	if err := m.setFolderCollapsed(section, folder, collapsed); err != nil {
+		m.err = err.Error()
+		return m, nil
+	}
+	m.status = "folder " + folder
+	if collapsed {
+		m.status += " collapsed"
+	} else {
+		m.status += " expanded"
+	}
+	indices := m.visibleFeedIndices()
+	if len(indices) > 0 {
+		m.feedCursor = indices[0]
+		for _, index := range indices {
+			if index >= current {
+				m.feedCursor = index
+				break
+			}
+		}
+	}
+	m.ensureCursorVisible()
+	return m, nil
+}
+
+func (m Model) selectedFeedID() int64 {
+	if len(m.feeds) == 0 || m.feedCursor < 0 || m.feedCursor >= len(m.feeds) {
+		return 0
+	}
+	return m.feeds[m.feedCursor].ID
+}
+
+func (m *Model) useCachedItems(feedID int64) bool {
+	items, ok := m.itemCache[feedID]
+	if !ok {
+		return false
+	}
+	m.items = items
+	m.podcasts = nil
+	m.itemCursor = 0
+	m.itemScroll = 0
+	m.stageScroll = 0
+	m.clamp()
+	m.clearArticle()
+	return true
+}

@@ -21,6 +21,15 @@ const (
 	focusArticle
 )
 
+type lockMode int
+
+const (
+	lockOpen lockMode = iota
+	lockUnlock
+	lockCreate
+	lockConfirm
+)
+
 type Model struct {
 	cfg          config.Config
 	cfgPath      string
@@ -58,6 +67,8 @@ type Model struct {
 	playingID    int64
 	refreshing   bool
 	pickedFeedID int64
+	lockMode     lockMode
+	pendingPass  string
 }
 
 func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
@@ -67,6 +78,16 @@ func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
 	input.Prompt = "interrogate> "
 	spin := spinner.New()
 	spin.Spinner = spinner.Line
+	mode := lockUnlock
+	if has, err := vault.HasLock(); err == nil && !has {
+		mode = lockCreate
+	}
+	if mode != lockOpen {
+		input.Placeholder = "vault password"
+		input.Prompt = "vault> "
+		input.EchoMode = textinput.EchoPassword
+		input.Focus()
+	}
 	return Model{
 		cfg:        cfg,
 		cfgPath:    cfgPath,
@@ -80,9 +101,13 @@ func New(cfg config.Config, cfgPath string, vault *store.Store) Model {
 		hideSludge: cfg.UI.HideSludge,
 		status:     "r refresh source | R refresh all | space pick/drop | n folder",
 		aiEnabled:  llm.New(cfg.Active()).Available(context.Background()),
+		lockMode:   mode,
 	}
 }
 
 func (m Model) Init() tea.Cmd {
+	if m.lockMode != lockOpen {
+		return textinput.Blink
+	}
 	return tea.Batch(seedFeedsCmd(m.store, m.cfg.Feeds), m.spinner.Tick)
 }

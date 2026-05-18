@@ -9,61 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-func (m *Model) move(delta int) {
-	switch m.focus {
-	case focusFeeds:
-		m.feedCursor += delta
-		m.clamp()
-		m.ensureCursorVisible()
-		if len(m.feeds) > 0 {
-			m.itemCursor = 0
-			m.itemScroll = 0
-			m.stageScroll = 0
-			m.items = nil
-			m.podcasts = nil
-			m.clearArticle()
-		}
-	case focusItems:
-		m.itemCursor += delta
-		m.clamp()
-		m.ensureCursorVisible()
-	case focusArticle:
-		m.stageScroll += delta
-		m.clampScrolls()
-	}
-}
-
-func (m *Model) retreat() {
-	if m.focus > focusFeeds {
-		m.focus--
-	}
-	m.status = "back"
-	m.clamp()
-	m.ensureCursorVisible()
-}
-
-func (m Model) selectedFeedID() int64 {
-	if len(m.feeds) == 0 || m.feedCursor < 0 || m.feedCursor >= len(m.feeds) {
-		return 0
-	}
-	return m.feeds[m.feedCursor].ID
-}
-
-func (m *Model) useCachedItems(feedID int64) bool {
-	items, ok := m.itemCache[feedID]
-	if !ok {
-		return false
-	}
-	m.items = items
-	m.podcasts = nil
-	m.itemCursor = 0
-	m.itemScroll = 0
-	m.stageScroll = 0
-	m.clamp()
-	m.clearArticle()
-	return true
-}
-
 func (m Model) pickOrDropFeed() (tea.Model, tea.Cmd) {
 	feed := m.feeds[m.feedCursor]
 	if m.pickedFeedID == 0 {
@@ -126,7 +71,8 @@ func (m *Model) page(delta int) {
 	step := max(1, bodyHeight-4)
 	switch m.focus {
 	case focusFeeds:
-		m.feedCursor += delta * step
+		m.move(delta * step)
+		return
 	case focusItems:
 		m.itemCursor += delta * step
 	case focusArticle:
@@ -153,7 +99,10 @@ func (m *Model) home() {
 func (m *Model) end() {
 	switch m.focus {
 	case focusFeeds:
-		m.feedCursor = len(m.feeds) - 1
+		indices := m.visibleFeedIndices()
+		if len(indices) > 0 {
+			m.feedCursor = indices[len(indices)-1]
+		}
 	case focusItems:
 		m.itemCursor = m.itemTargetCount() - 1
 	case focusArticle:
@@ -178,7 +127,8 @@ func (m *Model) updateMouse(msg tea.MouseMsg) {
 func (m *Model) scrollFocused(delta int) {
 	switch m.focus {
 	case focusFeeds:
-		m.feedCursor += delta
+		m.move(delta)
+		return
 	case focusItems:
 		m.itemCursor += delta
 	case focusArticle:
@@ -279,6 +229,19 @@ func (m *Model) clamp() {
 	if m.feedCursor >= len(m.feeds) && len(m.feeds) > 0 {
 		m.feedCursor = len(m.feeds) - 1
 	}
+	visible := m.visibleFeedIndices()
+	if len(visible) > 0 {
+		found := false
+		for _, index := range visible {
+			if index == m.feedCursor {
+				found = true
+				break
+			}
+		}
+		if !found {
+			m.feedCursor = visible[0]
+		}
+	}
 	if m.itemCursor < 0 {
 		m.itemCursor = 0
 	}
@@ -293,11 +256,12 @@ func (m *Model) ensureCursorVisible() {
 	visible := max(1, bodyHeight-3)
 	switch m.focus {
 	case focusFeeds:
-		if m.feedCursor < m.feedScroll {
-			m.feedScroll = m.feedCursor
+		row := m.sourceCursorRow()
+		if row < m.feedScroll {
+			m.feedScroll = row
 		}
-		if m.feedCursor >= m.feedScroll+visible {
-			m.feedScroll = m.feedCursor - visible + 1
+		if row >= m.feedScroll+visible {
+			m.feedScroll = row - visible + 1
 		}
 	case focusItems:
 		if m.itemCursor < m.itemScroll {
@@ -313,7 +277,7 @@ func (m *Model) ensureCursorVisible() {
 func (m *Model) clampListScrolls() {
 	_, bodyHeight := m.layout()
 	visible := max(1, bodyHeight-3)
-	m.feedScroll = clampInt(m.feedScroll, 0, max(0, len(m.feeds)-visible))
+	m.feedScroll = clampInt(m.feedScroll, 0, max(0, len(m.sourceRows())-visible))
 	m.itemScroll = clampInt(m.itemScroll, 0, max(0, m.itemTargetCount()-visible))
 }
 

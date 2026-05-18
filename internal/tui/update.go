@@ -6,10 +6,14 @@ import (
 	"github.com/bprendie/weazlfeed/internal/audio"
 	"github.com/bprendie/weazlfeed/internal/store"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.lockMode != lockOpen {
+		return m.updateLock(msg)
+	}
 	if m.asking || m.folderInput || m.podcastInput {
 		return m.updateInput(msg)
 	}
@@ -121,6 +125,14 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.home()
 	case "end":
 		m.end()
+	case "left":
+		if m.focus == focusFeeds {
+			return m.toggleCurrentFolder(true)
+		}
+	case "right":
+		if m.focus == focusFeeds {
+			return m.toggleCurrentFolder(false)
+		}
 	case "R":
 		m.refreshing = true
 		m.itemCache = map[int64][]store.Item{}
@@ -159,6 +171,7 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.folderInput = true
 			m.input.Placeholder = "new folder"
 			m.input.Prompt = "folder> "
+			m.input.EchoMode = textinput.EchoNormal
 			m.input.Focus()
 			return m, nil
 		}
@@ -166,11 +179,13 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.podcastInput = true
 		m.input.Placeholder = "podcast search"
 		m.input.Prompt = "podcast> "
+		m.input.EchoMode = textinput.EchoNormal
 		m.input.Focus()
 		return m, nil
 	case "ctrl+a":
 		if m.aiEnabled && len(m.items) > 0 {
 			m.asking = true
+			m.input.EchoMode = textinput.EchoNormal
 			m.input.Focus()
 			return m, nil
 		}

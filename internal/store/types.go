@@ -19,9 +19,10 @@ type Feed struct {
 }
 
 type Folder struct {
-	ID      int64
-	Section string
-	Name    string
+	ID        int64
+	Section   string
+	Name      string
+	Collapsed bool
 }
 
 type Item struct {

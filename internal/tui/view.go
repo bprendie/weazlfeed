@@ -13,6 +13,9 @@ func (m Model) View() string {
 	if m.width == 0 {
 		return "weazlfeed"
 	}
+	if m.lockMode != lockOpen {
+		return m.lockView()
+	}
 	dims, bodyHeight := m.layout()
 	contentWidth := max(20, m.width)
 	header := m.header(contentWidth)
@@ -48,40 +51,32 @@ func (m Model) renderFeeds(width, height int) string {
 	if len(m.feeds) == 0 {
 		return m.styles.help.Render(truncate("No feeds yet. Add feeds in config, then run setup or refresh.", width))
 	}
-	var lines []string
-	seenFolders := map[string]bool{}
-	for i, feed := range m.visibleFeeds() {
-		section := firstText(feed.Section, sectionFromFeed(feed))
-		folder := firstText(feed.Folder, folderFromFeed(feed))
-		seenFolders[section+"/"+folder] = true
-		if section != previousSection(m.feeds, m.feedScroll+i) {
-			lines = append(lines, m.styles.status.Render(":: "+section+" ::"))
+	rows := m.sourceRows()
+	rows = windowSourceRows(rows, m.feedScroll, max(1, height-3))
+	lines := make([]string, 0, len(rows))
+	for _, row := range rows {
+		switch row.kind {
+		case sourceSection:
+			lines = append(lines, m.styles.status.Render(truncate(":: "+row.title+" ::", width)))
+		case sourceFolder:
+			marker := "[-]"
+			if row.collapsed {
+				marker = "[+]"
+			}
+			lines = append(lines, m.styles.help.Render(truncate("  "+marker+" "+row.title, width)))
+		case sourceFeed:
+			prefix := "  "
+			if m.feeds[row.feedIndex].Type == "gopher" {
+				prefix = "g>"
+			}
+			line := truncate(" - "+prefix+" "+row.title+" ["+intText(row.unread)+"]", width)
+			if row.feedIndex == m.feedCursor {
+				line = m.styles.selected.Render(truncate("=> "+prefix+" "+row.title+" ["+intText(row.unread)+"]", width))
+			} else {
+				line = m.styles.item.Render(line)
+			}
+			lines = append(lines, line)
 		}
-		if folder != previousFolder(m.feeds, m.feedScroll+i) {
-			lines = append(lines, m.styles.help.Render("  ["+folder+"]"))
-		}
-		prefix := "  "
-		if feed.Type == "gopher" {
-			prefix = "g>"
-		}
-		feedIndex := m.feedScroll + i
-		var line string
-		if feedIndex == m.feedCursor {
-			line = truncate("=> "+prefix+" "+feed.Title+" ["+intText(feed.Unread)+"]", width)
-			line = m.styles.selected.Render(line)
-		} else {
-			line = truncate(" - "+prefix+" "+feed.Title+" ["+intText(feed.Unread)+"]", width)
-			line = m.styles.item.Render(line)
-		}
-		lines = append(lines, line)
-	}
-	for _, folder := range m.folders {
-		key := folder.Section + "/" + folder.Name
-		if seenFolders[key] {
-			continue
-		}
-		lines = append(lines, m.styles.status.Render(":: "+folder.Section+" ::"))
-		lines = append(lines, m.styles.help.Render("  ["+folder.Name+"]"))
 	}
 	return fitLines(lines, height-3)
 }
@@ -142,7 +137,7 @@ func (m Model) footer() string {
 		picked = " | picked source"
 	}
 	parts := []string{
-		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [enter] open [esc] back [tab] node [space] pick/drop [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
+		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [enter] open [esc] back [left/right] fold [space] pick/drop [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
 		m.styles.status.Render(ai + " | " + audioState + picked + compactVisualizer(m.visualizer())),
 	}
 	if m.err != "" {
@@ -263,20 +258,15 @@ func (m Model) stageLineCount() int {
 	return len(strings.Split(m.article, "\n"))
 }
 
-func (m Model) visibleFeeds() []store.Feed {
-	_, bodyHeight := m.layout()
-	return windowFeeds(m.feeds, m.feedScroll, max(1, bodyHeight-3))
-}
-
 func (m Model) visibleItems() []store.Item {
 	_, bodyHeight := m.layout()
 	return windowItems(m.items, m.itemScroll, max(1, bodyHeight-4))
 }
 
-func windowFeeds(feeds []store.Feed, start, count int) []store.Feed {
-	start = clampInt(start, 0, len(feeds))
-	end := clampInt(start+count, start, len(feeds))
-	return feeds[start:end]
+func windowSourceRows(rows []sourceRow, start, count int) []sourceRow {
+	start = clampInt(start, 0, len(rows))
+	end := clampInt(start+count, start, len(rows))
+	return rows[start:end]
 }
 
 func windowItems(items []store.Item, start, count int) []store.Item {
@@ -328,25 +318,6 @@ func clampInt(value, low, high int) int {
 		return high
 	}
 	return value
-}
-
-func previousSection(feeds []store.Feed, index int) string {
-	if index <= 0 || index > len(feeds)-1 {
-		return ""
-	}
-	return firstText(feeds[index-1].Section, sectionFromFeed(feeds[index-1]))
-}
-
-func previousFolder(feeds []store.Feed, index int) string {
-	if index <= 0 || index > len(feeds)-1 {
-		return ""
-	}
-	prev := feeds[index-1]
-	current := feeds[index]
-	if previousSection(feeds, index) != firstText(current.Section, sectionFromFeed(current)) {
-		return ""
-	}
-	return firstText(prev.Folder, folderFromFeed(prev))
 }
 
 func sectionFromFeed(feed store.Feed) string {

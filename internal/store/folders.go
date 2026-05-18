@@ -16,7 +16,7 @@ func (s *Store) UpsertFolder(section, name string) error {
 
 func (s *Store) Folders() ([]Folder, error) {
 	rows, err := s.db.Query(`
-		SELECT id, section, name FROM folders
+		SELECT id, section, name, collapsed FROM folders
 		ORDER BY CASE section WHEN 'News' THEN 0 WHEN 'Podcasts' THEN 1 WHEN 'Gopher' THEN 2 ELSE 3 END,
 			lower(name)
 	`)
@@ -27,10 +27,24 @@ func (s *Store) Folders() ([]Folder, error) {
 	var folders []Folder
 	for rows.Next() {
 		var f Folder
-		if err := rows.Scan(&f.ID, &f.Section, &f.Name); err != nil {
+		var collapsed int
+		if err := rows.Scan(&f.ID, &f.Section, &f.Name, &collapsed); err != nil {
 			return nil, err
 		}
+		f.Collapsed = collapsed == 1
 		folders = append(folders, f)
 	}
 	return folders, rows.Err()
+}
+
+func (s *Store) SetFolderCollapsed(section, name string, collapsed bool) error {
+	if err := s.UpsertFolder(section, name); err != nil {
+		return err
+	}
+	value := 0
+	if collapsed {
+		value = 1
+	}
+	_, err := s.db.Exec(`UPDATE folders SET collapsed = ? WHERE section = ? AND name = ?`, value, section, name)
+	return err
 }
