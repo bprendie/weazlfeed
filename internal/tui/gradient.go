@@ -24,7 +24,7 @@ func renderLogo(s string, width int) string {
 	wordmark := gradientLogo(s)
 	logoWidth := maxLineWidth(s)
 	if width <= 0 || width < logoWidth+10 {
-		return lipgloss.NewStyle().Foreground(crushPink).Bold(true).Render("////// WeazlFeed //////")
+		return gradientLogo("////// WeazlFeed //////")
 	}
 
 	fieldStyle := lipgloss.NewStyle().Foreground(crushPurple).Bold(true)

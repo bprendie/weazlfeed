@@ -37,7 +37,7 @@ func (m Model) panel(title, body string, width, height int, active bool) string 
 
 func (m Model) header(width int) string {
 	if width < maxLineWidth(logo) || m.height < 18 {
-		return m.styles.header.Render("////// WeazlFeed //////")
+		return gradientLogo("////// WeazlFeed //////")
 	}
 	return renderLogo(logo, width)
 }
