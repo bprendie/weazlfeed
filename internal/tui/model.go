@@ -46,6 +46,7 @@ type Model struct {
 	feeds        []store.Feed
 	folders      []store.Folder
 	items        []store.Item
+	gopherStack  [][]store.Item
 	itemCache    map[int64][]store.Item
 	podcasts     []podcast.Result
 	sourceCursor int

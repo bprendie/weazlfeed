@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/bprendie/weazlfeed/internal/app"
@@ -131,6 +132,65 @@ func gopherArticleCmd(url string) tea.Cmd {
 		}
 		return articleMsg{text: text}
 	}
+}
+
+func gopherPageCmd(url string) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		parsed, err := feed.FetchGopher(ctx, url)
+		if err != nil {
+			return gopherMsg{url: url, err: err}
+		}
+		if len(parsed.Items) == 1 && parsed.Items[0].Link == url {
+			return gopherMsg{url: url, text: parsed.Items[0].ContentMarkdown}
+		}
+		items := make([]store.Item, 0, len(parsed.Items))
+		for _, item := range parsed.Items {
+			body := item.ContentMarkdown
+			if body == "" {
+				body = item.Link
+			}
+			items = append(items, store.Item{
+				GUID:            firstText(item.GUID, item.Link, item.Title),
+				Title:           firstText(item.Title, "untitled"),
+				Link:            item.Link,
+				PublishedAt:     item.PublishedAt,
+				ContentHTML:     item.ContentHTML,
+				ContentMarkdown: body,
+				EnclosureType:   gopherEnclosureType(item.Link),
+				ReadStatus:      true,
+				SludgeChecked:   true,
+			})
+		}
+		return gopherMsg{url: url, items: items}
+	}
+}
+
+func gopherEnclosureType(link string) string {
+	kind := gopherLinkKind(link)
+	switch kind {
+	case "1":
+		return "gopher/directory"
+	case "0":
+		return "text/plain"
+	case "7":
+		return "gopher/search"
+	case "g", "I":
+		return "image/gopher"
+	case "h":
+		return "text/html"
+	default:
+		return "application/gopher"
+	}
+}
+
+func gopherLinkKind(link string) string {
+	parts := strings.SplitN(link, "/", 4)
+	if len(parts) < 4 || parts[3] == "" {
+		return "1"
+	}
+	return parts[3][:1]
 }
 
 func renderReaderCmd(vault *store.Store, item store.Item, width int) tea.Cmd {

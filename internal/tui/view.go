@@ -150,7 +150,7 @@ func (m Model) footer() string {
 		picked = " | picked source"
 	}
 	parts := []string{
-		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [enter] open [esc] back [left/right] fold [space] pick/drop [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
+		m.styles.help.Render(truncate("[j/k] nav [pg] scroll [enter] open/fold [esc/left] back [right] expand [space] pick/drop [n] folder [p] podcast [r/R] refresh [q] quit", max(10, m.width))),
 		m.styles.status.Render(ai + " | " + audioState + picked + compactVisualizer(m.visualizer())),
 	}
 	if m.err != "" {
@@ -196,7 +196,16 @@ func badges(item store.Item) string {
 		parts = append(parts, "[SLUDGE]")
 	}
 	if strings.HasPrefix(strings.ToLower(item.Link), "gopher://") {
-		parts = append(parts, "[GOPHER]")
+		switch firstText(item.EnclosureType, gopherEnclosureType(item.Link)) {
+		case "gopher/directory":
+			parts = append(parts, "[DIR]")
+		case "gopher/search":
+			parts = append(parts, "[SEARCH]")
+		case "text/plain":
+			parts = append(parts, "[TXT]")
+		default:
+			parts = append(parts, "[GOPHER]")
+		}
 	}
 	return strings.Join(parts, " ")
 }

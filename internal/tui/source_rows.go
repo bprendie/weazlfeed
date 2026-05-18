@@ -22,23 +22,58 @@ type sourceRow struct {
 
 func (m Model) sourceRows() []sourceRow {
 	rows := []sourceRow{}
-	seenSection := map[string]bool{}
-	seenFolder := map[string]bool{}
-	for i, feed := range m.feeds {
+	sections := []string{"News", "Podcasts", "Gopher"}
+	sectionSeen := map[string]bool{"News": true, "Podcasts": true, "Gopher": true}
+	foldersBySection := map[string][]string{
+		"News":     []string{"General"},
+		"Podcasts": []string{"Search"},
+		"Gopher":   []string{"Directory"},
+	}
+	folderSeen := map[string]bool{
+		folderKey("News", "General"):     true,
+		folderKey("Podcasts", "Search"):  true,
+		folderKey("Gopher", "Directory"): true,
+	}
+	for _, folder := range m.folders {
+		section := firstText(folder.Section, "News")
+		if !sectionSeen[section] {
+			sections = append(sections, section)
+			sectionSeen[section] = true
+		}
+		key := folderKey(section, folder.Name)
+		if !folderSeen[key] {
+			foldersBySection[section] = append(foldersBySection[section], folder.Name)
+			folderSeen[key] = true
+		}
+	}
+	for _, feed := range m.feeds {
 		section := firstText(feed.Section, sectionFromFeed(feed))
 		folder := firstText(feed.Folder, folderFromFeed(feed))
-		if !seenSection[section] {
-			rows = append(rows, sourceRow{kind: sourceSection, section: section, title: section})
-			seenSection[section] = true
+		if !sectionSeen[section] {
+			sections = append(sections, section)
+			sectionSeen[section] = true
 		}
 		key := folderKey(section, folder)
-		if !seenFolder[key] {
+		if !folderSeen[key] {
+			foldersBySection[section] = append(foldersBySection[section], folder)
+			folderSeen[key] = true
+		}
+	}
+	for _, section := range sections {
+		rows = append(rows, sourceRow{kind: sourceSection, section: section, title: section})
+		for _, folder := range foldersBySection[section] {
 			collapsed := m.folderCollapsed(section, folder)
 			rows = append(rows, sourceRow{kind: sourceFolder, section: section, folder: folder, title: folder, collapsed: collapsed})
-			seenFolder[key] = true
-		}
-		if !m.folderCollapsed(section, folder) {
-			rows = append(rows, sourceRow{kind: sourceFeed, section: section, folder: folder, feedIndex: i, title: feed.Title, unread: feed.Unread})
+			if collapsed {
+				continue
+			}
+			for i, feed := range m.feeds {
+				feedSection := firstText(feed.Section, sectionFromFeed(feed))
+				feedFolder := firstText(feed.Folder, folderFromFeed(feed))
+				if feedSection == section && feedFolder == folder {
+					rows = append(rows, sourceRow{kind: sourceFeed, section: section, folder: folder, feedIndex: i, title: feed.Title, unread: feed.Unread})
+				}
+			}
 		}
 	}
 	return rows

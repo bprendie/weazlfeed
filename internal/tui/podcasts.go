@@ -50,11 +50,15 @@ func (m Model) subscribePodcast() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	result := m.podcasts[m.itemCursor]
-	if _, err := m.store.UpsertFeed(result.Title, result.FeedURL, "rss", "Podcasts", "Search", "Search"); err != nil {
+	folder := "Search"
+	if row, ok := m.selectedSourceRow(); ok && row.section == "Podcasts" && row.folder != "" {
+		folder = row.folder
+	}
+	if _, err := m.store.UpsertFeed(result.Title, result.FeedURL, "rss", "Podcasts", folder, folder); err != nil {
 		m.err = err.Error()
 		return m, nil
 	}
-	m.status = "subscribed podcast: " + result.Title
+	m.status = "subscribed podcast: " + result.Title + " -> " + folder
 	m.podcasts = nil
 	m.itemCursor = 0
 	m.itemScroll = 0

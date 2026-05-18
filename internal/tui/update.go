@@ -85,6 +85,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.stageScroll = 0
 			m.status = "gopher target loaded"
 		}
+	case gopherMsg:
+		m.rendering = false
+		m.err = errText(msg.err)
+		if msg.err == nil && len(msg.items) > 0 {
+			m.items = msg.items
+			m.podcasts = nil
+			m.itemCursor = 0
+			m.itemScroll = 0
+			m.stageScroll = 0
+			m.focus = focusItems
+			m.clearArticle()
+			m.status = "gopher menu: " + intText(len(msg.items)) + " entries"
+		}
+		if msg.err == nil && len(msg.items) == 0 {
+			m.focus = focusArticle
+			m.setArticle(msg.text)
+			m.stageScroll = 0
+			m.status = "gopher document loaded"
+		}
 	case readerMsg:
 		m.rendering = false
 		m.err = errText(msg.err)
@@ -151,9 +170,7 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "end":
 		m.end()
 	case "left":
-		if m.focus == focusFeeds {
-			return m.toggleCurrentFolder(true)
-		}
+		m.retreat()
 	case "right":
 		if m.focus == focusFeeds {
 			return m.toggleCurrentFolder(false)

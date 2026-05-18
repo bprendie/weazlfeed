@@ -92,6 +92,15 @@ func gopherMenuItem(kind byte, fields []string, idx int, fallbackHost, fallbackP
 	selector := fields[1]
 	host := firstNonEmpty(fields[2], fallbackHost)
 	port := firstNonEmpty(fields[3], fallbackPort)
+	if kind == 'i' {
+		return Item{
+			GUID:            fmt.Sprintf("%s#%d:%s", fallbackHost, idx, label),
+			Title:           label,
+			ContentMarkdown: label,
+			ContentHTML:     label,
+			PublishedAt:     time.Now(),
+		}
+	}
 	link := "gopher://" + host
 	if port != "" && port != "70" {
 		link += ":" + port
@@ -109,7 +118,7 @@ func gopherMenuItem(kind byte, fields []string, idx int, fallbackHost, fallbackP
 }
 
 func isGopherType(kind byte) bool {
-	return strings.ContainsRune("013456789gIh", rune(kind))
+	return strings.ContainsRune("013456789gIhi", rune(kind))
 }
 
 func gopherKind(kind byte) string {
@@ -128,6 +137,8 @@ func gopherKind(kind byte) string {
 		return "image"
 	case 'h':
 		return "html"
+	case 'i':
+		return "info"
 	default:
 		return "gopher"
 	}

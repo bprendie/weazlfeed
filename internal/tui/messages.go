@@ -44,6 +44,13 @@ type articleMsg struct {
 	err  error
 }
 
+type gopherMsg struct {
+	url   string
+	items []store.Item
+	text  string
+	err   error
+}
+
 type readerMsg struct {
 	item     store.Item
 	raw      string
