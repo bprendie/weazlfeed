@@ -119,3 +119,23 @@ func (m Model) renderPodcastModal(bodyHeight int) string {
 		Render(content)
 	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
 }
+
+func (m Model) renderDeleteFeedModal(bodyHeight int) string {
+	outerWidth := clampInt(m.width-8, 36, 88)
+	contentWidth := max(24, outerWidth-4)
+	title := truncate(m.deleteFeedTitle, contentWidth)
+	lines := []string{
+		m.styles.error.Render("DELETE FEED?"),
+		"",
+		m.styles.item.Render(title),
+		"",
+		m.styles.help.Render("This removes the source and its local items."),
+		m.styles.help.Render("enter/y confirms | esc/n cancels"),
+	}
+	modal := m.styles.panel.
+		Width(contentWidth).
+		BorderForeground(crushGold).
+		Padding(1, 2).
+		Render(strings.Join(lines, "\n"))
+	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
+}

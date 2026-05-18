@@ -23,6 +23,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.helpOpen {
 		return m.updateHelp(msg)
 	}
+	if m.confirmDelete {
+		return m.updateDeleteFeed(msg)
+	}
 	if m.podcastInput {
 		return m.updatePodcastDirectory(msg)
 	}
@@ -84,6 +87,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = errText(msg.err)
 		if msg.err == nil && msg.title != "" {
 			m.status = "added " + msg.title + " -> " + msg.section + "/" + msg.folder + " (" + intText(msg.added) + " items)"
+			return m, loadFeedsCmd(m.store)
+		}
+	case deleteFeedMsg:
+		m.itemCache = map[int64][]store.Item{}
+		m.err = errText(msg.err)
+		if msg.err == nil {
+			m.items = nil
+			m.clearArticle()
+			m.status = "deleted feed: " + msg.title
 			return m, loadFeedsCmd(m.store)
 		}
 	case aiMsg:
@@ -201,6 +213,8 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "ctrl+k", "?", "f1":
 		m.helpOpen = true
 		m.status = "help"
+	case "ctrl+d":
+		return m.startDeleteFeed()
 	case "j", "down":
 		m.move(1)
 	case "k", "up":

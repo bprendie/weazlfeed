@@ -116,3 +116,8 @@ func (s *Store) MoveFeed(feedID int64, section, folder string) error {
 	_, err := s.db.Exec(`UPDATE feeds SET section = ?, folder = ?, category = ? WHERE id = ?`, section, folder, folder, feedID)
 	return err
 }
+
+func (s *Store) DeleteFeed(feedID int64) error {
+	_, err := s.db.Exec(`DELETE FROM feeds WHERE id = ?`, feedID)
+	return err
+}

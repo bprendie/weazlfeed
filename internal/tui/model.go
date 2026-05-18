@@ -70,6 +70,9 @@ type Model struct {
 	podcastInput     bool
 	urlInput         bool
 	helpOpen         bool
+	confirmDelete    bool
+	deleteFeedID     int64
+	deleteFeedTitle  string
 	paused           bool
 	energy           audio.Sample
 	visualizer       Visualizer

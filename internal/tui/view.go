@@ -36,6 +36,9 @@ func (m Model) View() string {
 	if m.helpOpen {
 		body = m.renderHelpModal(bodyHeight)
 	}
+	if m.confirmDelete {
+		body = m.renderDeleteFeedModal(bodyHeight)
+	}
 	footer := m.footer()
 	return m.styles.frame.Width(m.width).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
 }

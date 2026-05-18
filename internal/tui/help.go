@@ -32,6 +32,7 @@ Sources and folders
   a                   Add a feed, podcast RSS URL, or Gopher URL to the selected folder.
   n                   Create a folder in the selected section.
   space               Pick up a source; move to a folder/source; space again to drop.
+  ctrl+d              Delete the selected source after confirmation.
   enter on folder     Fold or unfold the folder.
   right               Expand the selected folder.
   r                   Refresh selected source.

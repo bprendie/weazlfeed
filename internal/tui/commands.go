@@ -159,6 +159,12 @@ func addFeedCmd(vault *store.Store, rawURL, section, folder string) tea.Cmd {
 	}
 }
 
+func deleteFeedCmd(vault *store.Store, feedID int64, title string) tea.Cmd {
+	return func() tea.Msg {
+		return deleteFeedMsg{feedID: feedID, title: title, err: vault.DeleteFeed(feedID)}
+	}
+}
+
 func feedHasAudio(parsed feed.Feed) bool {
 	for _, item := range parsed.Items {
 		if strings.HasPrefix(item.EnclosureType, "audio/") || looksAudioURL(item.EnclosureURL) {

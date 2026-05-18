@@ -38,6 +38,12 @@ type addFeedMsg struct {
 	err     error
 }
 
+type deleteFeedMsg struct {
+	feedID int64
+	title  string
+	err    error
+}
+
 type aiMsg struct {
 	text string
 	err  error
