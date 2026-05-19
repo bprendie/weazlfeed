@@ -3,6 +3,7 @@ package tui
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bprendie/weazlfeed/internal/store"
 	tea "github.com/charmbracelet/bubbletea"
@@ -187,9 +188,8 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 			}
 			m.focus = focusArticle
 			m.stageScroll = 0
-			m.rendering = true
+			m.startRendering("opening interrogation")
 			m.clearArticle()
-			m.status = m.spinner.View() + " opening interrogation"
 			return m, tea.Batch(renderInterrogationCmd(m.interrogations[row.aiIndex], m.readerWidth()), m.spinner.Tick)
 		}
 		if row.kind != sourceFeed {
@@ -234,10 +234,22 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	}
 	m.focus = focusArticle
 	m.stageScroll = 0
-	m.rendering = true
+	m.startRendering("rendering reader")
 	m.clearArticle()
-	m.status = m.spinner.View() + " rendering reader"
 	return m, tea.Batch(renderReaderCmd(m.store, item, m.readerWidth()), m.spinner.Tick)
+}
+
+func (m *Model) startRendering(action string) {
+	m.rendering = true
+	m.renderAction = action
+	m.renderStartedAt = time.Now()
+	m.status = gradientStatus(m.spinner.View() + " " + m.renderWorkingText())
+}
+
+func (m *Model) finishRendering() {
+	m.rendering = false
+	m.renderAction = ""
+	m.renderStartedAt = time.Time{}
 }
 
 func (m *Model) clamp() {

@@ -46,6 +46,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
+		if m.rendering {
+			m.status = gradientStatus(m.spinner.View() + " " + m.renderWorkingText())
+		}
 		if m.refreshing || m.rendering || m.aiWorking {
 			return m, cmd
 		}
@@ -131,7 +134,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case articleMsg:
-		m.rendering = false
+		m.finishRendering()
 		m.err = errText(msg.err)
 		if msg.err == nil {
 			m.setArticle(msg.text)
@@ -139,12 +142,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = "gopher target loaded"
 		}
 	case gopherMsg:
-		m.rendering = false
+		m.finishRendering()
 		m.err = errText(msg.err)
 		if msg.err == nil {
 			m.gopherCache[msg.url] = gopherCacheEntry{
-				items: append([]store.Item(nil), msg.items...),
-				text:  msg.text,
+				items:    append([]store.Item(nil), msg.items...),
+				text:     msg.text,
+				rendered: msg.rendered,
 			}
 		}
 		if msg.err == nil && len(msg.items) > 0 {
@@ -159,7 +163,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if msg.err == nil && len(msg.items) == 0 {
 			m.focus = focusArticle
-			m.setArticle(msg.text)
+			m.rawArticle = msg.text
+			m.article = firstText(msg.rendered, renderMarkdownText(msg.text, m.readerWidth()))
+			m.savedRawArticle = ""
+			m.savedArticle = ""
+			m.activeAIItem = store.Item{}
+			m.articleMode = articleNormal
 			m.stageScroll = 0
 			m.status = "gopher document loaded"
 		}
@@ -169,7 +178,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = "downloaded " + msg.path
 		}
 	case readerMsg:
-		m.rendering = false
+		m.finishRendering()
 		m.err = errText(msg.err)
 		if msg.err == nil {
 			m.rawArticle = msg.raw
@@ -188,7 +197,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	case interrogationMsg:
-		m.rendering = false
+		m.finishRendering()
 		m.err = errText(msg.err)
 		if msg.err == nil {
 			m.rawArticle = msg.raw

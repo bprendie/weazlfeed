@@ -64,13 +64,12 @@ func (m Model) dialGopher(rawURL, title string) (tea.Model, tea.Cmd) {
 		return m.applyCachedGopher(rawURL, title, cached), nil
 	}
 	m.focus = focusArticle
-	m.rendering = true
+	m.startRendering("dialing gopher")
 	m.clearArticle()
-	m.status = "dialing gopher target"
 	m.gopherStack = append(m.gopherStack, append([]store.Item(nil), m.items...))
 	m.gopherTrail = append(m.gopherTrail, firstText(title, gopherCrumb(rawURL)))
 	m.gopherURLs = append(m.gopherURLs, rawURL)
-	return m, tea.Batch(gopherPageCmd(rawURL), m.spinner.Tick)
+	return m, tea.Batch(gopherPageCmd(rawURL, m.readerWidth()), m.spinner.Tick)
 }
 
 func (m Model) applyCachedGopher(rawURL, title string, cached gopherCacheEntry) tea.Model {
@@ -78,6 +77,8 @@ func (m Model) applyCachedGopher(rawURL, title string, cached gopherCacheEntry) 
 	m.gopherTrail = append(m.gopherTrail, firstText(title, gopherCrumb(rawURL)))
 	m.gopherURLs = append(m.gopherURLs, rawURL)
 	m.rendering = false
+	m.renderAction = ""
+	m.renderStartedAt = time.Time{}
 	m.err = ""
 	if len(cached.items) > 0 {
 		m.items = append([]store.Item(nil), cached.items...)
@@ -91,7 +92,12 @@ func (m Model) applyCachedGopher(rawURL, title string, cached gopherCacheEntry) 
 		return m
 	}
 	m.focus = focusArticle
-	m.setArticle(cached.text)
+	m.rawArticle = cached.text
+	m.article = firstText(cached.rendered, renderMarkdownText(cached.text, m.readerWidth()))
+	m.savedRawArticle = ""
+	m.savedArticle = ""
+	m.activeAIItem = store.Item{}
+	m.articleMode = articleNormal
 	m.stageScroll = 0
 	m.status = "gopher cache: document"
 	return m

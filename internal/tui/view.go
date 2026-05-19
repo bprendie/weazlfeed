@@ -163,7 +163,11 @@ func (m Model) renderStage(width, height int) string {
 		return fitLines(lines, height-3)
 	}
 	if m.rendering {
-		return fitLines([]string{m.styles.status.Render(m.spinner.View() + " rendering reader")}, height-3)
+		lines := []string{
+			m.styles.status.Render(gradientStatus(m.spinner.View() + " " + m.renderWorkingText())),
+			m.styles.help.Render(truncate("large documents can take a moment; reader is working", width)),
+		}
+		return fitLines(lines, height-3)
 	}
 	if m.articleMode != articleNormal && len(m.article) > 0 {
 		mode := "AI"
@@ -206,7 +210,7 @@ func (m Model) footer() string {
 		audioState = m.spinner.View() + " refreshing"
 	}
 	if m.rendering {
-		audioState = m.spinner.View() + " rendering"
+		audioState = m.spinner.View() + " " + m.renderWorkingText()
 	}
 	if m.aiWorking {
 		audioState = m.spinner.View() + " " + m.aiWorkingText()

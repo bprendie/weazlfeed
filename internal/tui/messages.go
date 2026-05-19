@@ -70,15 +70,17 @@ type articleMsg struct {
 }
 
 type gopherMsg struct {
-	url   string
-	items []store.Item
-	text  string
-	err   error
+	url      string
+	items    []store.Item
+	text     string
+	rendered string
+	err      error
 }
 
 type gopherCacheEntry struct {
-	items []store.Item
-	text  string
+	items    []store.Item
+	text     string
+	rendered string
 }
 
 type gopherDownloadMsg struct {

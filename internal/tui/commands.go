@@ -272,7 +272,7 @@ func gopherArticleCmd(url string) tea.Cmd {
 	}
 }
 
-func gopherPageCmd(url string) tea.Cmd {
+func gopherPageCmd(url string, width int) tea.Cmd {
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -281,7 +281,8 @@ func gopherPageCmd(url string) tea.Cmd {
 			return gopherMsg{url: url, err: err}
 		}
 		if len(parsed.Items) == 1 && parsed.Items[0].Link == url {
-			return gopherMsg{url: url, text: parsed.Items[0].ContentMarkdown}
+			text := parsed.Items[0].ContentMarkdown
+			return gopherMsg{url: url, text: text, rendered: renderMarkdownText(text, width)}
 		}
 		items := make([]store.Item, 0, len(parsed.Items))
 		for _, item := range parsed.Items {

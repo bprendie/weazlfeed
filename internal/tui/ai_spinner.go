@@ -24,6 +24,19 @@ var aiThinkingPhrases = []string{
 	"taxing_the_gig",
 }
 
+var renderThinkingPhrases = []string{
+	"burning_html_off_the_wire",
+	"wrapping_raw_signal",
+	"deansi_frying_the_payload",
+	"polishing_terminal_glyphs",
+	"unrolling_the_scrollback",
+	"taming_longform_static",
+	"cutting_tracking_pixels",
+	"compressing_the_feed_blob",
+	"painting_neon_markdown",
+	"warming_the_reader_tube",
+}
+
 func (m Model) aiWorkingText() string {
 	if len(aiThinkingPhrases) == 0 || m.aiStartedAt.IsZero() {
 		return firstText(m.aiAction, "local_model_working")
@@ -32,6 +45,16 @@ func (m Model) aiWorkingText() string {
 	start := int((m.aiStartedAt.UnixNano() / int64(time.Millisecond)) % int64(len(aiThinkingPhrases)))
 	phrase := aiThinkingPhrases[(start+phase)%len(aiThinkingPhrases)]
 	return firstText(m.aiAction, "ai") + " | " + phrase
+}
+
+func (m Model) renderWorkingText() string {
+	if len(renderThinkingPhrases) == 0 || m.renderStartedAt.IsZero() {
+		return firstText(m.renderAction, "rendering_reader")
+	}
+	phase := min(len(renderThinkingPhrases)-1, int(time.Since(m.renderStartedAt)/(3*time.Second)))
+	start := int((m.renderStartedAt.UnixNano() / int64(time.Millisecond)) % int64(len(renderThinkingPhrases)))
+	phrase := renderThinkingPhrases[(start+phase)%len(renderThinkingPhrases)]
+	return firstText(m.renderAction, "rendering reader") + " | " + phrase
 }
 
 func (m Model) aiMetricsView(width int) string {

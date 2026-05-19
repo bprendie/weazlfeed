@@ -114,6 +114,8 @@ type Model struct {
 	revealFolder          string
 	refreshing            bool
 	rendering             bool
+	renderAction          string
+	renderStartedAt       time.Time
 	aiWorking             bool
 	aiAction              string
 	aiStartedAt           time.Time
