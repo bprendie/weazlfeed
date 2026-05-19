@@ -38,7 +38,7 @@ func (m Model) pickOrDropFeed() (tea.Model, tea.Cmd) {
 
 func (m Model) createFolder(name string) (tea.Model, tea.Cmd) {
 	name = strings.TrimSpace(name)
-	if name == "" || len(m.feeds) == 0 {
+	if name == "" {
 		return m, nil
 	}
 	section := "News"
@@ -53,6 +53,9 @@ func (m Model) createFolder(name string) (tea.Model, tea.Cmd) {
 		m.err = err.Error()
 		return m, nil
 	}
+	m.upsertLocalFolder(section, name, false)
+	m.selectSourceRow(section, name)
+	m.ensureCursorVisible()
 	m.status = "folder ready: " + section + "/" + name + " (space drops a picked source)"
 	if m.pickedFeedID != 0 {
 		picked := m.findFeed(m.pickedFeedID)
@@ -67,6 +70,16 @@ func (m Model) createFolder(name string) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+func (m *Model) upsertLocalFolder(section, name string, collapsed bool) {
+	for i := range m.folders {
+		if m.folders[i].Section == section && m.folders[i].Name == name {
+			m.folders[i].Collapsed = collapsed
+			return
+		}
+	}
+	m.folders = append(m.folders, store.Folder{Section: section, Name: name, Collapsed: collapsed})
 }
 
 func (m Model) findFeed(id int64) *store.Feed {

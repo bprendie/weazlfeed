@@ -176,13 +176,7 @@ func (m *Model) setFolderCollapsed(section, folder string, collapsed bool) error
 	if err := m.store.SetFolderCollapsed(section, folder, collapsed); err != nil {
 		return err
 	}
-	for i := range m.folders {
-		if m.folders[i].Section == section && m.folders[i].Name == folder {
-			m.folders[i].Collapsed = collapsed
-			return nil
-		}
-	}
-	m.folders = append(m.folders, store.Folder{Section: section, Name: folder, Collapsed: collapsed})
+	m.upsertLocalFolder(section, folder, collapsed)
 	return nil
 }
 
