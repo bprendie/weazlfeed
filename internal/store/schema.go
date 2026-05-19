@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS ai_outputs (
 CREATE TABLE IF NOT EXISTS vault (
 	id INTEGER PRIMARY KEY CHECK (id = 1),
 	password_hash TEXT NOT NULL,
+	encryption_version INTEGER NOT NULL DEFAULT 0,
 	created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -84,4 +85,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_feeds_feed_key ON feeds(feed_key);
 ALTER TABLE folders ADD COLUMN collapsed INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE ai_outputs ADD COLUMN item_title TEXT;
 ALTER TABLE ai_outputs ADD COLUMN item_content TEXT;
+ALTER TABLE vault ADD COLUMN encryption_version INTEGER NOT NULL DEFAULT 0;
 `

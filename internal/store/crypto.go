@@ -31,7 +31,7 @@ func (s *Store) encryptText(value string) (string, error) {
 }
 
 func (s *Store) decryptText(value string) string {
-	if !strings.HasPrefix(value, encryptedPrefix) {
+	if !isEncryptedText(value) {
 		return value
 	}
 	parts := strings.Split(value, ":")
@@ -55,6 +55,10 @@ func (s *Store) decryptText(value string) string {
 		return value
 	}
 	return string(plain)
+}
+
+func isEncryptedText(value string) bool {
+	return strings.HasPrefix(value, encryptedPrefix)
 }
 
 func (s *Store) feedKey(url string) string {

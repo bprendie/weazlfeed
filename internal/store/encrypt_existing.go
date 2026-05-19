@@ -4,6 +4,20 @@ func (s *Store) EnsureEncrypted() error {
 	if !s.unlocked {
 		return nil
 	}
+	current, err := s.encryptionCurrent()
+	if err != nil {
+		return err
+	}
+	if current {
+		return nil
+	}
+	alreadyEncrypted, err := s.sensitiveRowsEncrypted()
+	if err != nil {
+		return err
+	}
+	if alreadyEncrypted {
+		return s.setEncryptionVersion(1)
+	}
 	if err := s.encryptFeeds(); err != nil {
 		return err
 	}
@@ -13,7 +27,67 @@ func (s *Store) EnsureEncrypted() error {
 	if err := s.encryptAIOutputs(); err != nil {
 		return err
 	}
-	return s.encryptRules()
+	if err := s.encryptRules(); err != nil {
+		return err
+	}
+	return s.setEncryptionVersion(1)
+}
+
+func (s *Store) encryptionCurrent() (bool, error) {
+	var version int
+	if err := s.db.QueryRow(`SELECT coalesce(encryption_version, 0) FROM vault WHERE id = 1`).Scan(&version); err != nil {
+		return false, err
+	}
+	return version >= 1, nil
+}
+
+func (s *Store) setEncryptionVersion(version int) error {
+	_, err := s.db.Exec(`UPDATE vault SET encryption_version = ? WHERE id = 1`, version)
+	return err
+}
+
+func (s *Store) sensitiveRowsEncrypted() (bool, error) {
+	checks := []string{
+		`SELECT title, url, section, folder, category, coalesce(last_error, '') FROM feeds`,
+		`SELECT title, coalesce(link, ''), coalesce(content_html, ''), coalesce(content_markdown, ''), coalesce(enclosure_url, '') FROM items`,
+		`SELECT rule_prompt FROM bouncer_rules`,
+		`SELECT coalesce(item_title, ''), coalesce(item_content, ''), prompt, response FROM ai_outputs`,
+	}
+	for _, query := range checks {
+		ok, err := s.queryEncrypted(query)
+		if err != nil || !ok {
+			return ok, err
+		}
+	}
+	return true, nil
+}
+
+func (s *Store) queryEncrypted(query string) (bool, error) {
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	cols, err := rows.Columns()
+	if err != nil {
+		return false, err
+	}
+	values := make([]string, len(cols))
+	args := make([]any, len(cols))
+	for i := range values {
+		args[i] = &values[i]
+	}
+	for rows.Next() {
+		if err := rows.Scan(args...); err != nil {
+			return false, err
+		}
+		for _, value := range values {
+			if value != "" && !isEncryptedText(value) {
+				return false, nil
+			}
+		}
+	}
+	return true, rows.Err()
 }
 
 func (s *Store) encryptFeeds() error {

@@ -73,3 +73,39 @@ func TestCreateLockEncryptsExistingRows(t *testing.T) {
 		t.Fatalf("decrypted AI output = %q", out.Response)
 	}
 }
+
+func TestUnlockSkipsEncryptionWhenCurrent(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "vault.sqlite3")
+	vault, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer vault.Close()
+
+	if _, err := vault.db.Exec(`
+		INSERT INTO feeds(title, url, type, section, folder, category)
+		VALUES('Plain Feed', 'https://example.com/feed.xml', 'rss', 'News', 'General', 'GENERAL')
+	`); err != nil {
+		t.Fatal(err)
+	}
+	if err := vault.CreateLock("test-password"); err != nil {
+		t.Fatal(err)
+	}
+	var first string
+	if err := vault.db.QueryRow(`SELECT title FROM feeds WHERE id = 1`).Scan(&first); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(first, encryptedPrefix) {
+		t.Fatalf("feed title was not encrypted: %q", first)
+	}
+	if err := vault.Unlock("test-password"); err != nil {
+		t.Fatal(err)
+	}
+	var second string
+	if err := vault.db.QueryRow(`SELECT title FROM feeds WHERE id = 1`).Scan(&second); err != nil {
+		t.Fatal(err)
+	}
+	if second != first {
+		t.Fatalf("unlock rewrote encrypted field\nfirst:  %q\nsecond: %q", first, second)
+	}
+}
