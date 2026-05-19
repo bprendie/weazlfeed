@@ -317,6 +317,10 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.feeds) > 0 {
 			return m, prefetchItemsCmd(m.store, m.feeds, m.hideSludge)
 		}
+	case "b":
+		if len(m.gopherURLs) > 0 || (len(m.feeds) > 0 && m.feedCursor >= 0 && m.feedCursor < len(m.feeds) && m.feeds[m.feedCursor].Type == "gopher") {
+			return m.bookmarkGopherLocation()
+		}
 	case "enter":
 		return m.activate()
 	case " ":

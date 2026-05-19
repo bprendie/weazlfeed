@@ -200,8 +200,10 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 		m.podcasts = nil
 		m.gopherStack = nil
 		m.gopherTrail = nil
+		m.gopherURLs = nil
 		if feed.Type == "gopher" {
 			m.gopherTrail = []string{feed.Title}
+			m.gopherURLs = []string{feed.URL}
 		}
 		m.focus = focusItems
 		m.status = "opened source: " + feed.Title

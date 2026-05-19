@@ -69,12 +69,14 @@ func (m Model) dialGopher(rawURL, title string) (tea.Model, tea.Cmd) {
 	m.status = "dialing gopher target"
 	m.gopherStack = append(m.gopherStack, append([]store.Item(nil), m.items...))
 	m.gopherTrail = append(m.gopherTrail, firstText(title, gopherCrumb(rawURL)))
+	m.gopherURLs = append(m.gopherURLs, rawURL)
 	return m, tea.Batch(gopherPageCmd(rawURL), m.spinner.Tick)
 }
 
 func (m Model) applyCachedGopher(rawURL, title string, cached gopherCacheEntry) tea.Model {
 	m.gopherStack = append(m.gopherStack, append([]store.Item(nil), m.items...))
 	m.gopherTrail = append(m.gopherTrail, firstText(title, gopherCrumb(rawURL)))
+	m.gopherURLs = append(m.gopherURLs, rawURL)
 	m.rendering = false
 	m.err = ""
 	if len(cached.items) > 0 {
@@ -180,6 +182,45 @@ func isGopherURLType(kind byte) bool {
 
 func textinputBlink() tea.Cmd {
 	return textinput.Blink
+}
+
+func (m Model) bookmarkGopherLocation() (tea.Model, tea.Cmd) {
+	rawURL := m.currentGopherURL()
+	if rawURL == "" {
+		m.status = "no gopher location to bookmark"
+		return m, nil
+	}
+	title := m.currentGopherTitle()
+	feedID, err := m.store.UpsertFeed(title, rawURL, "gopher", "Gopher", "Bookmarks", "Bookmarks")
+	if err != nil {
+		m.err = err.Error()
+		return m, nil
+	}
+	m.revealFeedID = feedID
+	m.revealSection = "Gopher"
+	m.revealFolder = "Bookmarks"
+	m.status = "bookmarked gopher: " + title
+	return m, loadFeedsCmd(m.store)
+}
+
+func (m Model) currentGopherURL() string {
+	if len(m.gopherURLs) > 0 {
+		return m.gopherURLs[len(m.gopherURLs)-1]
+	}
+	if len(m.feeds) > 0 && m.feedCursor >= 0 && m.feedCursor < len(m.feeds) && m.feeds[m.feedCursor].Type == "gopher" {
+		return m.feeds[m.feedCursor].URL
+	}
+	return ""
+}
+
+func (m Model) currentGopherTitle() string {
+	if len(m.gopherTrail) > 0 {
+		return firstText(m.gopherTrail[len(m.gopherTrail)-1], gopherCrumb(m.currentGopherURL()))
+	}
+	if len(m.feeds) > 0 && m.feedCursor >= 0 && m.feedCursor < len(m.feeds) && m.feeds[m.feedCursor].Type == "gopher" {
+		return firstText(m.feeds[m.feedCursor].Title, gopherCrumb(m.feeds[m.feedCursor].URL))
+	}
+	return firstText(gopherCrumb(m.currentGopherURL()), "gopher bookmark")
 }
 
 func downloadGopherCmd(item store.Item) tea.Cmd {

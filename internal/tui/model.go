@@ -61,6 +61,7 @@ type Model struct {
 	items                 []store.Item
 	gopherStack           [][]store.Item
 	gopherTrail           []string
+	gopherURLs            []string
 	gopherCache           map[string]gopherCacheEntry
 	itemCache             map[int64][]store.Item
 	podcasts              []podcast.Result

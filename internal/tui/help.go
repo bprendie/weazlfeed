@@ -62,5 +62,6 @@ Gopher
   Directory entries open as nested menus in the items pane.
   Search entries open a centered query prompt.
   Text entries open in the reader.
+  b saves the current Gopher location under Gopher/Bookmarks.
   esc or left walks back through the Gopher menu stack.`
 }
