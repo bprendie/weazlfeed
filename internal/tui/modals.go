@@ -50,6 +50,28 @@ func (m Model) renderGopherSearchModal(bodyHeight int) string {
 	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
 }
 
+func (m Model) renderGopherDownloadModal(bodyHeight int) string {
+	outerWidth := clampInt(m.width-8, 38, 88)
+	contentWidth := max(26, outerWidth-4)
+	item := m.gopherDownloadItem
+	kind := strings.ToUpper(gopherItemKind(item))
+	lines := []string{
+		m.styles.error.Render("DOWNLOAD GOPHER " + kind + "?"),
+		"",
+		m.styles.item.Render(truncate(item.Title, contentWidth)),
+		"",
+		m.styles.help.Render(truncate(item.Link, contentWidth)),
+		m.styles.help.Render("Raw payloads are not rendered in the TUI."),
+		m.styles.help.Render("enter/y downloads | esc/n cancels"),
+	}
+	modal := m.styles.panel.
+		Width(contentWidth).
+		BorderForeground(crushGold).
+		Padding(1, 2).
+		Render(strings.Join(lines, "\n"))
+	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
+}
+
 func (m Model) renderHelpModal(bodyHeight int) string {
 	outerWidth := clampInt(m.width-8, 36, 92)
 	contentWidth := max(24, outerWidth-4)

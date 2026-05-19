@@ -26,6 +26,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.confirmDelete {
 		return m.updateDeleteFeed(msg)
 	}
+	if m.confirmGopherDownload {
+		return m.updateGopherDownload(msg)
+	}
 	if m.bouncerOpen {
 		return m.updateBouncer(msg)
 	}
@@ -156,6 +159,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setArticle(msg.text)
 			m.stageScroll = 0
 			m.status = "gopher document loaded"
+		}
+	case gopherDownloadMsg:
+		m.err = errText(msg.err)
+		if msg.err == nil {
+			m.status = "downloaded " + msg.path
 		}
 	case readerMsg:
 		m.rendering = false

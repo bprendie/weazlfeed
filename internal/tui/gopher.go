@@ -1,16 +1,23 @@
 package tui
 
 import (
+	"context"
 	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
+	"time"
 
+	"github.com/bprendie/weazlfeed/internal/feed"
 	"github.com/bprendie/weazlfeed/internal/store"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (m Model) openGopherTarget(item store.Item) (tea.Model, tea.Cmd) {
-	if gopherItemKind(item) == "search" {
+	switch gopherItemKind(item) {
+	case "search":
 		m.gopherSearchInput = true
 		m.gopherSearchURL = item.Link
 		m.input.SetValue("")
@@ -19,8 +26,37 @@ func (m Model) openGopherTarget(item store.Item) (tea.Model, tea.Cmd) {
 		m.input.Focus()
 		m.status = "gopher search: " + item.Title
 		return m, textinputBlink()
+	case "binary", "image":
+		m.confirmGopherDownload = true
+		m.gopherDownloadItem = item
+		m.status = "confirm gopher download"
+		return m, nil
 	}
 	return m.dialGopher(item.Link, item.Title)
+}
+
+func (m Model) updateGopherDownload(msg tea.Msg) (tea.Model, tea.Cmd) {
+	key, ok := msg.(tea.KeyMsg)
+	if !ok {
+		return m, nil
+	}
+	switch key.String() {
+	case "esc", "n", "N":
+		m.clearGopherDownload()
+		m.status = "download cancelled"
+		return m, nil
+	case "enter", "y", "Y":
+		item := m.gopherDownloadItem
+		m.clearGopherDownload()
+		m.status = "downloading " + item.Title
+		return m, downloadGopherCmd(item)
+	}
+	return m, nil
+}
+
+func (m *Model) clearGopherDownload() {
+	m.confirmGopherDownload = false
+	m.gopherDownloadItem = store.Item{}
 }
 
 func (m Model) dialGopher(rawURL, title string) (tea.Model, tea.Cmd) {
@@ -144,4 +180,48 @@ func isGopherURLType(kind byte) bool {
 
 func textinputBlink() tea.Cmd {
 	return textinput.Blink
+}
+
+func downloadGopherCmd(item store.Item) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		data, err := feed.FetchGopherBytes(ctx, item.Link, 512*1024*1024)
+		if err != nil {
+			return gopherDownloadMsg{err: err}
+		}
+		dir, err := gopherDownloadDir()
+		if err != nil {
+			return gopherDownloadMsg{err: err}
+		}
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return gopherDownloadMsg{err: err}
+		}
+		path := filepath.Join(dir, gopherDownloadName(item))
+		if err := os.WriteFile(path, data, 0o600); err != nil {
+			return gopherDownloadMsg{err: err}
+		}
+		return gopherDownloadMsg{path: path}
+	}
+}
+
+func gopherDownloadDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return "weazlfeed-gopher", nil
+	}
+	return filepath.Join(home, "Downloads", "weazlfeed-gopher"), nil
+}
+
+func gopherDownloadName(item store.Item) string {
+	name := strings.TrimSpace(item.Title)
+	if name == "" {
+		name = gopherCrumb(item.Link)
+	}
+	name = regexp.MustCompile(`[^A-Za-z0-9._-]+`).ReplaceAllString(name, "_")
+	name = strings.Trim(name, "._-")
+	if name == "" {
+		name = "gopher_payload"
+	}
+	return name
 }

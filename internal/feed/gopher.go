@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"strings"
@@ -19,17 +20,7 @@ func FetchGopher(ctx context.Context, raw string) (Feed, error) {
 	if port == "" {
 		port = "70"
 	}
-	selector := strings.TrimPrefix(u.EscapedPath(), "/")
-	if selector != "" {
-		selector, _ = url.PathUnescape(selector)
-		if len(selector) > 1 && isGopherType(selector[0]) {
-			selector = selector[1:]
-		}
-	}
-	if u.RawQuery != "" {
-		query, _ := url.QueryUnescape(u.RawQuery)
-		selector += "\t" + query
-	}
+	selector := gopherSelector(u)
 	var d net.Dialer
 	conn, err := d.DialContext(ctx, "tcp", net.JoinHostPort(u.Hostname(), port))
 	if err != nil {
@@ -56,6 +47,46 @@ func FetchGopher(ctx context.Context, raw string) (Feed, error) {
 	parsed := parseGopher(raw, u.Hostname(), port, lines)
 	parsed.Status = 200
 	return parsed, nil
+}
+
+func FetchGopherBytes(ctx context.Context, raw string, limit int64) ([]byte, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return nil, err
+	}
+	port := u.Port()
+	if port == "" {
+		port = "70"
+	}
+	var d net.Dialer
+	conn, err := d.DialContext(ctx, "tcp", net.JoinHostPort(u.Hostname(), port))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(2 * time.Minute))
+	if _, err := fmt.Fprintf(conn, "%s\r\n", gopherSelector(u)); err != nil {
+		return nil, err
+	}
+	if limit <= 0 {
+		return io.ReadAll(conn)
+	}
+	return io.ReadAll(io.LimitReader(conn, limit))
+}
+
+func gopherSelector(u *url.URL) string {
+	selector := strings.TrimPrefix(u.EscapedPath(), "/")
+	if selector != "" {
+		selector, _ = url.PathUnescape(selector)
+		if len(selector) > 1 && isGopherType(selector[0]) {
+			selector = selector[1:]
+		}
+	}
+	if u.RawQuery != "" {
+		query, _ := url.QueryUnescape(u.RawQuery)
+		selector += "\t" + query
+	}
+	return selector
 }
 
 func parseGopher(raw, host, port string, lines []string) Feed {

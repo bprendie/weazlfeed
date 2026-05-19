@@ -81,6 +81,11 @@ type gopherCacheEntry struct {
 	text  string
 }
 
+type gopherDownloadMsg struct {
+	path string
+	err  error
+}
+
 type readerMsg struct {
 	item     store.Item
 	raw      string

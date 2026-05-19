@@ -45,6 +45,9 @@ func (m Model) View() string {
 	if m.confirmDelete {
 		body = m.renderDeleteFeedModal(bodyHeight)
 	}
+	if m.confirmGopherDownload {
+		body = m.renderGopherDownloadModal(bodyHeight)
+	}
 	footer := m.footer()
 	return m.styles.frame.Width(m.width).Render(lipgloss.JoinVertical(lipgloss.Left, header, body, footer))
 }
