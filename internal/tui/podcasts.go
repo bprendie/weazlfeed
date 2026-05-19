@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"github.com/bprendie/weazlfeed/internal/store"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -47,15 +46,10 @@ func (m Model) subscribePodcast() (tea.Model, tea.Cmd) {
 	if row, ok := m.selectedSourceRow(); ok && row.section == "Podcasts" && row.folder != "" {
 		folder = row.folder
 	}
-	feedID, err := m.store.UpsertFeed(result.Title, result.FeedURL, "rss", "Podcasts", folder, folder)
-	if err != nil {
-		m.err = err.Error()
+	if result.FeedURL == "" {
+		m.status = "podcast result has no feed url"
 		return m, nil
 	}
-	m.status = "subscribed podcast: " + result.Title + " -> " + folder
-	m.revealFeedID = feedID
-	m.revealSection = "Podcasts"
-	m.revealFolder = folder
 	m.podcastInput = false
 	m.podcasts = nil
 	m.podcastCursor = 0
@@ -65,13 +59,6 @@ func (m Model) subscribePodcast() (tea.Model, tea.Cmd) {
 	m.input.SetValue("")
 	m.input.Prompt = "interrogate> "
 	m.refreshing = true
-	return m, refreshCmd(m.store, []store.Feed{{
-		ID:       feedID,
-		Title:    result.Title,
-		URL:      result.FeedURL,
-		Type:     "rss",
-		Section:  "Podcasts",
-		Folder:   folder,
-		Category: folder,
-	}}, m.ai)
+	m.status = m.spinner.View() + " subscribing podcast: " + result.Title
+	return m, tea.Batch(addFeedCmd(m.store, result.FeedURL, "Podcasts", folder), m.spinner.Tick)
 }

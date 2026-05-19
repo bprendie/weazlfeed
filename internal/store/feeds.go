@@ -40,7 +40,13 @@ func (s *Store) UpsertFeed(title, url, feedType, section, folder, category strin
 	}
 	_, err = s.db.Exec(`
 		INSERT INTO feeds(title, url, type, section, folder, category, feed_key) VALUES(?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(feed_key) DO UPDATE SET title=excluded.title, type=excluded.type
+		ON CONFLICT(feed_key) DO UPDATE SET
+			title=excluded.title,
+			url=excluded.url,
+			type=excluded.type,
+			section=excluded.section,
+			folder=excluded.folder,
+			category=excluded.category
 	`, title, encryptedURL, feedType, section, folder, category, feedKey)
 	if err != nil {
 		return 0, err

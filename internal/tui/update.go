@@ -98,6 +98,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.itemCache = map[int64][]store.Item{}
 		m.err = errText(msg.err)
 		if msg.err == nil && msg.title != "" {
+			m.revealFeedID = msg.feedID
+			m.revealSection = msg.section
+			m.revealFolder = msg.folder
 			m.status = "added " + msg.title + " -> " + msg.section + "/" + msg.folder + " (" + intText(msg.added) + " items)"
 			return m, loadFeedsCmd(m.store)
 		}
