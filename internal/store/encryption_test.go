@@ -109,3 +109,49 @@ func TestUnlockSkipsEncryptionWhenCurrent(t *testing.T) {
 		t.Fatalf("unlock rewrote encrypted field\nfirst:  %q\nsecond: %q", first, second)
 	}
 }
+
+func TestGopherFeedsStayInGopherSection(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "vault.sqlite3")
+	vault, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer vault.Close()
+	if err := vault.CreateLock("test-password"); err != nil {
+		t.Fatal(err)
+	}
+	id, err := vault.UpsertFeed("Floodgap", "gopher://gopher.floodgap.com/", "gopher", "Podcasts", "Technology", "Technology")
+	if err != nil {
+		t.Fatal(err)
+	}
+	feeds, err := vault.Feeds()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got Feed
+	for _, feed := range feeds {
+		if feed.ID == id {
+			got = feed
+			break
+		}
+	}
+	if got.Section != "Gopher" || got.Folder != "Directory" {
+		t.Fatalf("gopher feed location = %s/%s", got.Section, got.Folder)
+	}
+	if err := vault.MoveFeed(id, "Podcasts", "Technology"); err != nil {
+		t.Fatal(err)
+	}
+	feeds, err = vault.Feeds()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, feed := range feeds {
+		if feed.ID == id {
+			got = feed
+			break
+		}
+	}
+	if got.Section != "Gopher" || got.Folder != "Directory" {
+		t.Fatalf("moved gopher feed location = %s/%s", got.Section, got.Folder)
+	}
+}

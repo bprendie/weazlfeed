@@ -7,6 +7,7 @@ import (
 )
 
 func (s *Store) UpsertFeed(title, url, feedType, section, folder, category string) (int64, error) {
+	section, folder, category = normalizeFeedLocation(feedType, section, folder, category)
 	if section == "" {
 		section = sectionFromType(feedType)
 	}
@@ -154,6 +155,11 @@ func (s *Store) SetFeedStatus(feedID int64, status int, etag, modified, lastErro
 }
 
 func (s *Store) MoveFeed(feedID int64, section, folder string) error {
+	var feedType string
+	if err := s.db.QueryRow(`SELECT type FROM feeds WHERE id = ?`, feedID).Scan(&feedType); err != nil {
+		return err
+	}
+	section, folder, _ = normalizeFeedLocation(feedType, section, folder, folder)
 	if err := s.UpsertFolder(section, folder); err != nil {
 		return err
 	}
@@ -176,6 +182,52 @@ func (s *Store) MoveFeed(feedID int64, section, folder string) error {
 func (s *Store) DeleteFeed(feedID int64) error {
 	_, err := s.db.Exec(`DELETE FROM feeds WHERE id = ?`, feedID)
 	return err
+}
+
+func (s *Store) NormalizeFeedLocations() error {
+	rows, err := s.db.Query(`SELECT id, type, section, folder, category FROM feeds`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	type feedLocation struct {
+		id                             int64
+		feedType, section, folder, cat string
+	}
+	var feeds []feedLocation
+	for rows.Next() {
+		var f feedLocation
+		if err := rows.Scan(&f.id, &f.feedType, &f.section, &f.folder, &f.cat); err != nil {
+			return err
+		}
+		f.section = s.decryptText(f.section)
+		f.folder = s.decryptText(f.folder)
+		f.cat = s.decryptText(f.cat)
+		feeds = append(feeds, f)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, f := range feeds {
+		section, folder, category := normalizeFeedLocation(f.feedType, f.section, f.folder, f.cat)
+		if section == f.section && folder == f.folder && category == f.cat {
+			continue
+		}
+		if err := s.MoveFeed(f.id, section, folder); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func normalizeFeedLocation(feedType, section, folder, category string) (string, string, string) {
+	if feedType == "gopher" {
+		if folder == "" || section == "Podcasts" {
+			folder = "Directory"
+		}
+		return "Gopher", folder, firstText(category, folder, "Directory")
+	}
+	return section, folder, category
 }
 
 func feedSortKey(f Feed) string {

@@ -24,7 +24,10 @@ func (s *Store) CreateLock(password string) error {
 		return err
 	}
 	s.unlockWith(password)
-	return s.EnsureEncrypted()
+	if err := s.EnsureEncrypted(); err != nil {
+		return err
+	}
+	return s.NormalizeFeedLocations()
 }
 
 func (s *Store) Unlock(password string) error {
@@ -36,7 +39,10 @@ func (s *Store) Unlock(password string) error {
 		return errors.New("bad vault password")
 	}
 	s.unlockWith(password)
-	return s.EnsureEncrypted()
+	if err := s.EnsureEncrypted(); err != nil {
+		return err
+	}
+	return s.NormalizeFeedLocations()
 }
 
 func (s *Store) unlockWith(password string) {
