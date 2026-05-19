@@ -29,6 +29,27 @@ func (m Model) renderURLModal(bodyHeight int) string {
 	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
 }
 
+func (m Model) renderGopherSearchModal(bodyHeight int) string {
+	outerWidth := clampInt(m.width-8, 34, 88)
+	contentWidth := max(22, outerWidth-4)
+	input := m.input
+	input.Width = contentWidth
+	lines := []string{
+		m.styles.status.Render("GOPHER SEARCH SELECTOR"),
+		m.styles.help.Render(truncate("target: "+gopherCrumb(m.gopherSearchURL), contentWidth)),
+		"",
+		input.View(),
+		"",
+		m.styles.help.Render("enter dial | esc cancel"),
+	}
+	modal := m.styles.panel.
+		Width(contentWidth).
+		BorderForeground(crushGold).
+		Padding(1, 2).
+		Render(strings.Join(lines, "\n"))
+	return lipgloss.Place(max(1, m.width), max(1, bodyHeight), lipgloss.Center, lipgloss.Center, modal)
+}
+
 func (m Model) renderHelpModal(bodyHeight int) string {
 	outerWidth := clampInt(m.width-8, 36, 92)
 	contentWidth := max(24, outerWidth-4)

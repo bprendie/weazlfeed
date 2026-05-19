@@ -32,7 +32,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.podcastInput {
 		return m.updatePodcastDirectory(msg)
 	}
-	if m.asking || m.folderInput || m.urlInput {
+	if m.asking || m.folderInput || m.urlInput || m.gopherSearchInput {
 		return m.updateInput(msg)
 	}
 	switch msg := msg.(type) {
@@ -135,6 +135,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case gopherMsg:
 		m.rendering = false
 		m.err = errText(msg.err)
+		if msg.err == nil {
+			m.gopherCache[msg.url] = gopherCacheEntry{
+				items: append([]store.Item(nil), msg.items...),
+				text:  msg.text,
+			}
+		}
 		if msg.err == nil && len(msg.items) > 0 {
 			m.items = msg.items
 			m.podcasts = nil

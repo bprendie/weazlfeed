@@ -60,6 +60,7 @@ Reader and local AI
 Gopher
   gopher:// URLs are routed into the Gopher section automatically.
   Directory entries open as nested menus in the items pane.
+  Search entries open a centered query prompt.
   Text entries open in the reader.
   esc or left walks back through the Gopher menu stack.`
 }

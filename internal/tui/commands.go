@@ -296,7 +296,7 @@ func gopherPageCmd(url string) tea.Cmd {
 				PublishedAt:     item.PublishedAt,
 				ContentHTML:     item.ContentHTML,
 				ContentMarkdown: body,
-				EnclosureType:   gopherEnclosureType(item.Link),
+				EnclosureType:   firstText(item.EnclosureType, gopherEnclosureType(item.Link)),
 				ReadStatus:      true,
 				SludgeChecked:   true,
 			})
@@ -318,6 +318,10 @@ func gopherEnclosureType(link string) string {
 		return "image/gopher"
 	case "h":
 		return "text/html"
+	case "8":
+		return "gopher/telnet"
+	case "9":
+		return "application/octet-stream"
 	default:
 		return "application/gopher"
 	}

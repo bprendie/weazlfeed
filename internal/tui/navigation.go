@@ -26,6 +26,7 @@ func (m *Model) move(delta int) {
 		m.stageScroll = 0
 		m.items = nil
 		m.gopherStack = nil
+		m.gopherTrail = nil
 		m.podcasts = nil
 		m.clearArticle()
 	case focusItems:
@@ -43,6 +44,9 @@ func (m *Model) retreat() {
 		last := len(m.gopherStack) - 1
 		m.items = m.gopherStack[last]
 		m.gopherStack = m.gopherStack[:last]
+		if len(m.gopherTrail) > 0 {
+			m.gopherTrail = m.gopherTrail[:len(m.gopherTrail)-1]
+		}
 		m.itemCursor = 0
 		m.itemScroll = 0
 		m.status = "gopher back"

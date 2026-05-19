@@ -36,6 +36,9 @@ func (m Model) View() string {
 	if m.urlInput {
 		body = m.renderURLModal(bodyHeight)
 	}
+	if m.gopherSearchInput {
+		body = m.renderGopherSearchModal(bodyHeight)
+	}
 	if m.helpOpen {
 		body = m.renderHelpModal(bodyHeight)
 	}
@@ -120,9 +123,9 @@ func (m Model) renderItems(width, height int) string {
 		return m.styles.help.Render(truncate("No items loaded.", width))
 	}
 	var lines []string
-	lines = append(lines, m.styles.help.Render("last signal / newest first"))
+	lines = append(lines, m.styles.help.Render(truncate(m.itemsHeader(), width)))
 	for i, item := range m.visibleItems() {
-		badges := badges(item, m.currentFeedIsPodcast())
+		badges := m.badges(item, m.currentFeedIsPodcast())
 		itemIndex := m.itemScroll + i
 		var line string
 		if itemIndex == m.itemCursor {
@@ -135,6 +138,13 @@ func (m Model) renderItems(width, height int) string {
 		lines = append(lines, line)
 	}
 	return fitLines(lines, height-3)
+}
+
+func (m Model) itemsHeader() string {
+	if len(m.gopherTrail) > 0 {
+		return "gopher:// " + strings.Join(m.gopherTrail, " / ")
+	}
+	return "last signal / newest first"
 }
 
 func (m Model) renderStage(width, height int) string {
@@ -220,7 +230,7 @@ func (m Model) footer() string {
 	return lipgloss.JoinVertical(lipgloss.Left, parts...)
 }
 
-func badges(item store.Item, podcast bool) string {
+func (m Model) badges(item store.Item, podcast bool) string {
 	var parts []string
 	if podcast {
 		switch {
@@ -245,18 +255,35 @@ func badges(item store.Item, podcast bool) string {
 		parts = append(parts, "[SLUDGE]")
 	}
 	if strings.HasPrefix(strings.ToLower(item.Link), "gopher://") {
-		switch firstText(item.EnclosureType, gopherEnclosureType(item.Link)) {
-		case "gopher/directory":
-			parts = append(parts, "[DIR]")
-		case "gopher/search":
-			parts = append(parts, "[SEARCH]")
-		case "text/plain":
-			parts = append(parts, "[TXT]")
-		default:
-			parts = append(parts, "[GOPHER]")
-		}
+		parts = append(parts, m.gopherBadge(gopherItemKind(item)))
+	} else if item.EnclosureType == "gopher/info" {
+		parts = append(parts, m.gopherBadge("info"))
 	}
 	return strings.Join(parts, " ")
+}
+
+func (m Model) gopherBadge(kind string) string {
+	label := "[GOPHER]"
+	color := crushPurple
+	switch kind {
+	case "directory":
+		label, color = "[DIR]", crushMint
+	case "search":
+		label, color = "[ASK]", crushGold
+	case "text":
+		label, color = "[TXT]", ink
+	case "info":
+		label, color = "[INFO]", muted
+	case "image":
+		label, color = "[IMG]", crushPink
+	case "html":
+		label, color = "[HTML]", crushGold
+	case "telnet":
+		label, color = "[TEL]", crushPurple
+	case "binary":
+		label, color = "[BIN]", crushPurple
+	}
+	return lipgloss.NewStyle().Foreground(color).Bold(true).Render(label)
 }
 
 func fitLines(lines []string, height int) string {

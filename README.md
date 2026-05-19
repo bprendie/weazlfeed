@@ -11,20 +11,23 @@ interrogate massive articles on the fly.
 
 No browser tabs. No walled gardens. Just the raw feed on the bare metal.
 
-## Features
+## Current Status: The Sovereign Reader
 
-- Local-first RSS and Atom reader backed by SQLite.
-- Gopher reader for `gopher://` menus and text pages.
-- Preloaded feed categories for tech, world news, sports, music, and Gopher.
-- Podcast/audio enclosure playback through `mpv`.
-- Playback resume with playhead checkpoints written during playback.
-- `ffmpeg`-powered Harmonica EQ visualizer when audio is active.
-- Podcast directory search inside the TUI, no paid API key required.
-- Local LLM integration for article Q&A, tactical summaries, and sludge rules.
-- Vault password unlock with encrypted feed/article payloads at rest.
-- Three-pane BBS-style TUI with focused pane expansion.
+- **Encrypted Metal:** Local-first RSS and Atom reader backed by a bcrypt-locked
+  SQLite vault.
+- **1993 Payloads:** Native Gopher reader for dialing `gopher://` menus and
+  ripping pure text.
+- **The Audio Pipe:** Podcast enclosures drop straight into `mpv`. Playhead
+  checkpoints save your spot automatically.
+- **No Fake Bars:** When audio is active, an `ffmpeg`-powered Harmonica EQ
+  visualizer renders the actual stream dynamics.
+- **Ghost Search:** Podcast directory search built directly into the TUI. No
+  paid API keys required.
+- **Tactical AI:** Local LLM integration for interrogating articles, ripping
+  tactical summaries, and bouncing SEO sludge.
+- **BBS TUI:** Three-pane terminal layout with focused pane expansion.
 
-## Install
+## Forge The Binary
 
 ```sh
 git clone https://github.com/bprendie/weazlfeed.git
@@ -32,7 +35,11 @@ cd weazlfeed
 ./scripts/install.sh
 ```
 
-The installer builds:
+No wizards. No corporate installers. The script compiles the core engine and
+the CLI utilities, tucks them into `~/.weazlfeed/bin`, and adds that directory
+to your shell `PATH`.
+
+Installed binaries:
 
 - `weazlfeed`
 - `weazlfeed-setup`
@@ -42,125 +49,29 @@ The installer builds:
 - `weazlfeed-prune`
 - `weazlfeed-vault`
 
-They are installed to:
+Requirements:
 
-```text
-~/.weazlfeed/bin
-```
+- Go 1.25+
+- SQLite through `github.com/mattn/go-sqlite3`
+- `mpv`
+- `ffmpeg`
+- Optional: Ollama or a vLLM/OpenAI-compatible local endpoint
 
-The installer also offers to add that directory to your shell `PATH`.
+If `mpv`, `ffmpeg`, or your local model are missing or offline, the text reader
+survives and keeps working. It fails closed.
 
-## Requirements
-
-- Go 1.25 or newer
-- SQLite support through `github.com/mattn/go-sqlite3`
-- `mpv` for podcast/audio playback
-- `ffmpeg` for the live EQ visualizer
-- Optional: Ollama or a vLLM/OpenAI-compatible local endpoint for AI features
-
-Text reading works without `mpv`, `ffmpeg`, or a local model.
-
-## Run
+## Boot Sequence & The Vault
 
 ```sh
 weazlfeed
 ```
 
-On first launch, WeazlFeed asks you to create a vault password. Later launches
-require that password before the TUI opens. The password is checked with bcrypt,
-the SQLite database file is forced to `0600` permissions, and feed/article
-payloads are encrypted at rest after unlock.
+On first launch, WeazlFeed demands a vault password. Later launches require
+that password before the UI even renders. The database is locked down to `0600`
+permissions, and payloads are encrypted at rest.
 
-Run setup again any time:
-
-```sh
-weazlfeed-setup
-```
-
-## Keybindings
-
-| Key | Action |
-| --- | --- |
-| `j` / `k` | Move through the focused pane |
-| `PgUp` / `PgDn` | Page the focused pane |
-| `Home` / `End` | Jump within the focused pane |
-| `tab` | Manually switch focus and expand that pane |
-| `enter` | Open source, read item, dial Gopher target, or play audio |
-| `esc` / `left` | Move back one pane, or stop/close active audio |
-| `space` | Pick/drop sources in Sources; pause/resume audio elsewhere |
-| `<` / `>` | Seek active audio back 10 seconds / forward 30 seconds |
-| `p` | Open the podcast directory |
-| `a` | Add a feed or Gopher URL to the selected folder |
-| `n` | Create a folder in the selected section |
-| `f` | Mark selected podcast episode finished |
-| `ctrl+d` | Delete selected source after confirmation |
-| `r` | Refresh selected source |
-| `R` | Refresh all sources |
-| `h` | Hide/show sludge-flagged items |
-| `ctrl+k` | Open the keybinding help screen |
-| `ctrl+a` | Ask the local model about the active item |
-| `ctrl+t` | Generate a 3-point tactical summary |
-| `ctrl+b` | Open the Bouncer rule desk |
-| `q` / `ctrl+c` | Quit |
-
-Mouse wheel scrolling works on the focused pane.
-Press `ctrl+k` in the TUI for the full command deck.
-
-## Feeds
-
-On first run, WeazlFeed seeds a starter deck:
-
-- `TECH`: Ars Technica, The Verge, Hacker News
-- `WORLD`: BBC World, NPR News
-- `SPORTS`: AP Sports
-- `MUSIC`: Pitchfork News, Rolling Stone Music
-- `GOPHER`: Floodgap Gopher, SDF Gopher
-
-Feeds live in SQLite and are also seeded from config. The default config is
-created at first launch. User moves stick: seed refreshes do not overwrite your
-folder organization.
-
-Inside Sources:
-
-- `space` picks up the selected source; move to a folder; `space` drops it.
-- `n` creates a folder under the selected section.
-- `a` opens a centered URL prompt. `gopher://` URLs route to Gopher. Audio feeds
-  route to Podcasts.
-- `ctrl+d` opens a delete confirmation for the selected source.
-
-Import OPML feed lists with:
-
-```sh
-weazlfeed-import feeds.opml
-```
-
-Search Apple Podcasts without a paid API key:
-
-```sh
-weazlfeed-podcast-search "darknet diaries"
-weazlfeed-podcast-search -add 1 "darknet diaries"
-```
-
-Added podcast feeds land under `Podcasts/Search`.
-Inside the TUI, press `p` to open the podcast directory. Search for a show,
-select a result, and press `enter` or `a` to subscribe it into the selected
-Podcasts folder. The new subscription refreshes immediately and jumps into view.
-
-Refresh all feeds from the shell with a per-feed status report:
-
-```sh
-weazlfeed-refresh
-```
-
-Prune old cached items without deleting subscriptions:
-
-```sh
-weazlfeed-prune -days 30
-```
-
-By default pruning keeps unread items and podcast items with saved playback
-positions. Use `-keep-unread=false` or `-keep-playhead=false` to prune more
-aggressively.
+Warning: There is no cloud recovery flow. You forget the password, you lose the
+database. Back up your metal.
 
 Force a vault unlock/encryption migration without refreshing feeds:
 
@@ -168,137 +79,136 @@ Force a vault unlock/encryption migration without refreshing feeds:
 weazlfeed-vault
 ```
 
-OPML files are ignored by Git so private or personally curated feed lists stay
-local.
+Need to reconfigure endpoints?
 
-## Gopher
-
-Gopher URLs use normal `gopher://` form:
-
-```text
-gopher://sdf.org/
-gopher://gopher.floodgap.com/
+```sh
+weazlfeed-setup
 ```
 
-Directory menus become nested item lists. Text pages render in the Reader pane.
-Selecting a Gopher item with `enter` dials the target and renders the next menu
-or page. `esc` or `left` walks back through the Gopher menu stack.
+## The Command Deck
 
-## Local AI
+Slash commands are dead here. The BBS relies on hotkeys. Hit `ctrl+k` in the
+TUI for the full matrix.
 
-Setup supports:
+| Key | Action |
+| --- | --- |
+| `j` / `k` | Move through the focused pane. |
+| `PgUp` / `PgDn` | Page the focused pane. |
+| `Home` / `End` | Jump to top/bottom of the focused pane. |
+| `tab` | Manually switch focus and expand that pane. |
+| `enter` | Open source, read item, dial Gopher target, or play audio. |
+| `esc` / `left` | Move back one pane, or kill the active audio process. |
+| `space` | Pick/drop sources in the left rail; pause/resume audio elsewhere. |
+| `<` / `>` | Seek active audio back 10s / forward 30s. |
+| `p` | Open the podcast directory. |
+| `a` | Add a feed or Gopher URL to the selected folder. |
+| `n` | Create a folder in the selected section. |
+| `f` | Mark selected podcast episode as finished. |
+| `ctrl+d` | Delete selected source after confirmation. |
+| `r` | Refresh the selected source. |
+| `R` | Force refresh all sources. |
+| `h` | Hide/show items flagged as sludge by the Bouncer. |
+| `ctrl+a` | Interrogate the local AI about the active item. |
+| `ctrl+t` | Command the local AI to extract a 3-point tactical summary. |
+| `ctrl+b` | Open the Bouncer rule desk. |
+| `q` / `ctrl+c` | Kill the app. |
 
-- `vllm`: queries `/v1/models`
-- `ollama`: queries `/api/tags`
+## The Signal: Feeds & Gopher
 
-If the endpoint is offline, setup falls back to manual model entry. The config
-is written to `~/.config/weazlfeed/config.json` and setup preserves the current
-provider, base URL, model, and context window when you rerun it.
+On first run, WeazlFeed drops a starter deck seeded from the config. Your moves
+stick: seed refreshes do not overwrite your folder organization.
+
+Organization: hit `space` to pick up a source, move it, and hit `space` to drop
+it. Press `a` to drop a new URL. `gopher://` URLs automatically route to the
+Gopher engine. Audio feeds route to Podcasts.
+
+Import/export: OPML files are explicitly ignored by Git so your private feed
+lists stay strictly local.
+
+```sh
+weazlfeed-import feeds.opml
+```
+
+Surfing Gopher: directory menus render as nested item lists. Hitting `enter`
+dials the target. `esc` walks you back up the stack. It is exactly what the
+internet felt like before the banners took over.
+
+Ghost Search Podcasts: bypass Apple's front door entirely. Search the directory
+and add a feed directly from the CLI, or hit `p` inside the TUI to browse and
+subscribe.
+
+```sh
+weazlfeed-podcast-search "darknet diaries"
+weazlfeed-podcast-search -add 1 "darknet diaries"
+```
+
+## Tactical AI Execution
 
 AI is wired as a local workbench, not a recommendation engine. It only touches
-the item you ask it to touch, and long articles are trimmed before they hit the
-model so a 20-token-per-second box does not make the TUI feel dead.
+the item you ask it to touch. Long articles are trimmed before they hit the
+model so a 20-token-per-second box does not lock up the TUI.
 
-- `ctrl+t`: Tactical Triage extracts the three most important technical points
-  from the active article. Results are cached in the encrypted vault, so opening
-  the same summary again is instant.
-- `ctrl+a`: Interrogation asks a question about the active article. The answer,
-  prompt, source title, source URL, and article snapshot are saved as an
-  encrypted local artifact.
-- `Interrogations`: saved interrogations appear as their own section in
-  Sources. Open one like a feed item, continue the questioning with `ctrl+a`, or
-  delete it with `ctrl+d`.
-- Bouncer rules: local prompts that decide whether new items are sludge. When
-  rules exist and the model is reachable, refresh checks newly inserted items
-  and sets their sludge flag. Use `h` to hide or show flagged items.
+**Interrogation (`ctrl+a`):** Ask a question about the active article. The
+answer, prompt, source title, and URL are saved as an encrypted local artifact.
+These appear in their own section in Sources. Open one, continue the
+questioning with `ctrl+a`, or nuke it with `ctrl+d`.
 
-During AI work, WeazlFeed shows the spinner phrases and token context bar from
-the WeazlChat flow so it is obvious when the local model is still thinking.
+**Tactical Triage (`ctrl+t`):** Extracts the three most important technical
+points from the active article. Results are cached in the encrypted vault, so
+reopening the summary is instant.
 
-The Bouncer desk opens with `ctrl+b`:
+**The Bouncer (`ctrl+b`):** Opens the Bouncer desk. Add (`n`) or delete (`d`)
+local prompts that decide whether new items are sludge, like `Flag SEO filler
+with no primary source`. During refresh, newly inserted items are scanned. Hit
+`h` to hide the garbage.
 
-- `n`: add a new sludge rule, such as `flag SEO filler with no primary source`
-- `d` or `ctrl+d`: delete the selected rule
-- `s`: scan the active article with the current rules
-- `esc` or `ctrl+b`: close the desk
+During AI work, WeazlFeed spins up the status phrases and token context bar
+from the WeazlChat flow so you know the local model is grinding. If the model
+is offline, AI commands fail closed instead of blocking the reader.
 
-If the model is offline, the reader keeps working. AI commands fail closed
-instead of blocking the rest of the app.
+## The Amp: Audio
 
-## Audio
+Items with audio enclosures are not text. Hitting `enter` triggers a centered
+playback window.
 
-Items with audio enclosures can be played with `enter`. Audio opens a centered
-playback window with the current timestamp, total duration when known, and the
-live EQ.
+WeazlFeed spawns `mpv` directly. No heavy CGO wrappers. It periodically writes
+your `playhead_seconds` to SQLite. If you crash out, it saves your spot.
 
-WeazlFeed starts `mpv` directly, without heavyweight bindings. During playback,
-it periodically saves `playhead_seconds` to SQLite so long podcasts can resume
-close to where they stopped, even after a bad exit.
+Podcast states:
+
+- `NEW`: Untouched.
+- `LISTENING`: Has a saved playhead.
+- `FINISHED`: Marked complete. Hit `f` to manually tag it.
 
 If `ffmpeg` is available, the EQ is driven by a real decoded audio meter. No
-fake bars. The Harmonica spring renderer just makes the real signal move like it
-has weight.
+fake bars. The Harmonica spring renderer gives the raw frequency signal
+physical weight.
 
-Audio controls:
+## Overrides & Diagnostics
 
-- `space`: pause/resume
-- `<`: back 10 seconds
-- `>`: forward 30 seconds
-- `esc`: stop/close and save the playhead
+Paths:
 
-Podcast episodes use podcast states instead of article states:
+- Config: `~/.config/weazlfeed/config.json`
+- SQLite Vault: `~/.local/share/weazlfeed/weazlfeed.sqlite3`
 
-- `NEW`: untouched
-- `LISTENING`: has a saved playhead
-- `FINISHED`: marked complete
-
-Press `f` on a podcast episode to mark it finished.
-
-## Files
-
-Default config:
-
-```text
-~/.config/weazlfeed/config.json
-```
-
-Default database:
-
-```text
-~/.local/share/weazlfeed/weazlfeed.sqlite3
-```
-
-Override paths:
+Override these at runtime if you are managing multiple identities:
 
 ```sh
 WEAZLFEED_CONFIG=/path/to/config.json weazlfeed
 WEAZLFEED_DATA=/path/to/data-dir weazlfeed
-WEAZLFEED_HOME=/path/to/install-root ./scripts/install.sh
 ```
 
-## Development
+Diagnostics:
+
+- `mpv not found`: Audio dies. Text reader lives.
+- `ffmpeg not found`: EQ dies. Audio lives.
+- Model endpoint connection refused: AI features are disabled until you spin up
+  your provider.
+- Forgotten vault password: You are cooked. Replace the database.
+
+Development:
 
 ```sh
 go test ./...
 go build ./cmd/weazlfeed
-go build ./cmd/weazlfeed-setup
-go build ./cmd/weazlfeed-refresh
-go build ./cmd/weazlfeed-podcast-search
-go build ./cmd/weazlfeed-prune
-go build ./cmd/weazlfeed-vault
 ```
-
-The codebase is intentionally modular. Keep files below 400 LOC unless there is
-a strong reason not to.
-
-## Troubleshooting
-
-- `mpv not found`: audio playback is disabled; text reading still works.
-- `ffmpeg not found`: the EQ visualizer is disabled; audio playback can still
-  work.
-- Model endpoint connection refused: AI features are disabled until your local
-  provider is running.
-- Gopher connection fails: the target host may be offline, blocked, or not
-  serving port 70.
-- Forgotten vault password: there is no recovery flow; back up or replace the
-  local database.

@@ -26,6 +26,10 @@ func FetchGopher(ctx context.Context, raw string) (Feed, error) {
 			selector = selector[1:]
 		}
 	}
+	if u.RawQuery != "" {
+		query, _ := url.QueryUnescape(u.RawQuery)
+		selector += "\t" + query
+	}
 	var d net.Dialer
 	conn, err := d.DialContext(ctx, "tcp", net.JoinHostPort(u.Hostname(), port))
 	if err != nil {
@@ -98,6 +102,7 @@ func gopherMenuItem(kind byte, fields []string, idx int, fallbackHost, fallbackP
 			Title:           label,
 			ContentMarkdown: label,
 			ContentHTML:     label,
+			EnclosureType:   "gopher/info",
 			PublishedAt:     time.Now(),
 		}
 	}
@@ -113,6 +118,7 @@ func gopherMenuItem(kind byte, fields []string, idx int, fallbackHost, fallbackP
 		Link:            link,
 		ContentMarkdown: body,
 		ContentHTML:     body,
+		EnclosureType:   "gopher/" + gopherKind(kind),
 		PublishedAt:     time.Now(),
 	}
 }

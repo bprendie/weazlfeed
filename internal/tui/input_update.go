@@ -14,6 +14,8 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.asking = false
 			m.folderInput = false
 			m.urlInput = false
+			m.gopherSearchInput = false
+			m.gopherSearchURL = ""
 			m.input.Blur()
 			m.input.SetValue("")
 			m.input.Prompt = "interrogate> "
@@ -22,9 +24,11 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			question := strings.TrimSpace(m.input.Value())
 			folderInput := m.folderInput
 			urlInput := m.urlInput
+			gopherSearchInput := m.gopherSearchInput
 			m.asking = false
 			m.folderInput = false
 			m.urlInput = false
+			m.gopherSearchInput = false
 			m.input.Blur()
 			m.input.SetValue("")
 			m.input.Prompt = "interrogate> "
@@ -33,6 +37,9 @@ func (m Model) updateInput(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			if urlInput {
 				return m.addURL(question)
+			}
+			if gopherSearchInput {
+				return m.runGopherSearch(question)
 			}
 			if question != "" {
 				item, ok := m.currentAIItem()

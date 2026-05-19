@@ -186,6 +186,10 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 		m.feedCursor = row.feedIndex
 		m.podcasts = nil
 		m.gopherStack = nil
+		m.gopherTrail = nil
+		if feed.Type == "gopher" {
+			m.gopherTrail = []string{feed.Title}
+		}
 		m.focus = focusItems
 		m.status = "opened source: " + feed.Title
 		if m.useCachedItems(feed.ID) {
@@ -201,12 +205,7 @@ func (m Model) activate() (tea.Model, tea.Cmd) {
 	}
 	item := m.items[m.itemCursor]
 	if strings.HasPrefix(strings.ToLower(item.Link), "gopher://") {
-		m.focus = focusArticle
-		m.rendering = true
-		m.clearArticle()
-		m.status = "dialing gopher target"
-		m.gopherStack = append(m.gopherStack, append([]store.Item(nil), m.items...))
-		return m, tea.Batch(gopherPageCmd(item.Link), m.spinner.Tick)
+		return m.openGopherTarget(item)
 	}
 	if item.EnclosureURL != "" && strings.HasPrefix(item.EnclosureType, "audio/") {
 		return m.playAudio(item)
