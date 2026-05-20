@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 const appName = "weazlfeed"
@@ -142,6 +143,9 @@ func configPath() string {
 	if p := os.Getenv("WEAZLFEED_CONFIG"); p != "" {
 		return p
 	}
+	if runtime.GOOS == "windows" {
+		return filepath.Join(windowsAppRoot(), "config", "config.json")
+	}
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		return filepath.Join(xdg, appName, "config.json")
 	}
@@ -153,9 +157,23 @@ func dataDir() string {
 	if p := os.Getenv("WEAZLFEED_DATA"); p != "" {
 		return p
 	}
+	if runtime.GOOS == "windows" {
+		return filepath.Join(windowsAppRoot(), "vaults")
+	}
 	if xdg := os.Getenv("XDG_DATA_HOME"); xdg != "" {
 		return filepath.Join(xdg, appName)
 	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".local", "share", appName)
+}
+
+func windowsAppRoot() string {
+	if p := os.Getenv("WEAZLFEED_HOME"); p != "" {
+		return p
+	}
+	if p := os.Getenv("APPDATA"); p != "" {
+		return filepath.Join(p, "WeazlFeed")
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, "AppData", "Roaming", "WeazlFeed")
 }

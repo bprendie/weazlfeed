@@ -29,15 +29,25 @@ No browser tabs. No walled gardens. Just the raw feed on the bare metal.
 
 ## Forge The Binary
 
+Linux/macOS:
+
 ```sh
 git clone https://github.com/bprendie/weazlfeed.git
 cd weazlfeed
 ./scripts/install.sh
 ```
 
-No wizards. No corporate installers. The script compiles the core engine and
-the CLI utilities, tucks them into `~/.weazlfeed/bin`, and adds that directory
-to your shell `PATH`.
+Windows PowerShell:
+
+```powershell
+git clone https://github.com/bprendie/weazlfeed.git
+cd weazlfeed
+powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
+```
+
+No wizards. No corporate installers. The install script compiles the core
+engine and the CLI utilities, tucks them into the app bin directory, and adds
+that directory to your user `PATH`.
 
 Installed binaries:
 
@@ -53,9 +63,22 @@ Requirements:
 
 - Go 1.25+
 - SQLite through `github.com/mattn/go-sqlite3`
+- C toolchain for CGO (`go-sqlite3`)
 - `mpv`
 - `ffmpeg`
 - Optional: Ollama or a vLLM/OpenAI-compatible local endpoint
+
+On Windows, `scripts\install.ps1` installs missing dependencies with `winget`:
+Git, Go, MSYS2/UCRT64 GCC, FFmpeg, and mpv. It installs WeazlFeed under:
+
+```text
+%APPDATA%\WeazlFeed\bin
+%APPDATA%\WeazlFeed\config
+%APPDATA%\WeazlFeed\vaults
+```
+
+If this is the first time those tools were installed, open a new PowerShell
+after the installer so Windows picks up the refreshed `PATH`.
 
 If `mpv`, `ffmpeg`, or your local model are missing or offline, the text reader
 survives and keeps working. It fails closed.
@@ -188,14 +211,23 @@ physical weight.
 
 Paths:
 
-- Config: `~/.config/weazlfeed/config.json`
-- SQLite Vault: `~/.local/share/weazlfeed/weazlfeed.sqlite3`
+- Linux/macOS config: `~/.config/weazlfeed/config.json`
+- Linux/macOS SQLite vault: `~/.local/share/weazlfeed/weazlfeed.sqlite3`
+- Windows config: `%APPDATA%\WeazlFeed\config\config.json`
+- Windows SQLite vault: `%APPDATA%\WeazlFeed\vaults\weazlfeed.sqlite3`
 
 Override these at runtime if you are managing multiple identities:
 
 ```sh
 WEAZLFEED_CONFIG=/path/to/config.json weazlfeed
 WEAZLFEED_DATA=/path/to/data-dir weazlfeed
+```
+
+PowerShell:
+
+```powershell
+$env:WEAZLFEED_CONFIG="C:\path\to\config.json"; weazlfeed
+$env:WEAZLFEED_DATA="C:\path\to\vault-dir"; weazlfeed
 ```
 
 Diagnostics:
