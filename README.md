@@ -69,7 +69,10 @@ Requirements:
 - Optional: Ollama or a vLLM/OpenAI-compatible local endpoint
 
 On Windows, `scripts\install.ps1` installs missing dependencies with `winget`:
-Git, Go, MSYS2/UCRT64 GCC, FFmpeg, and mpv. It installs WeazlFeed under:
+Git, Go, MSYS2/UCRT64 GCC, FFmpeg, and mpv. The installer uses the
+`9P3JFR0CLLL6` winget package for mpv and adds the discovered `mpv.exe`
+directory to your user `PATH` when the package installer does not do that
+itself. It installs WeazlFeed under:
 
 ```text
 %APPDATA%\WeazlFeed\bin

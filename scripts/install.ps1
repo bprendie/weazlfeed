@@ -53,6 +53,48 @@ function Add-PathEntry($Path) {
     }
 }
 
+function Find-Executable($Name) {
+    $command = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($command) {
+        return $command.Source
+    }
+
+    $candidates = @()
+    if ($env:LOCALAPPDATA) {
+        $candidates += Join-Path $env:LOCALAPPDATA "Programs\mpv\$Name"
+        $wingetPackages = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
+        if (Test-Path $wingetPackages) {
+            $found = Get-ChildItem -Path $wingetPackages -Filter $Name -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+                return $found.FullName
+            }
+        }
+    }
+    if ($env:ProgramFiles) {
+        $candidates += Join-Path $env:ProgramFiles "mpv\$Name"
+    }
+    if (${env:ProgramFiles(x86)}) {
+        $candidates += Join-Path ${env:ProgramFiles(x86)} "mpv\$Name"
+    }
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+    }
+    return $null
+}
+
+function Ensure-CommandPath($Command, $ExecutableName) {
+    if (Test-Command $Command) {
+        return
+    }
+    $executable = Find-Executable $ExecutableName
+    if ($executable) {
+        Add-PathEntry (Split-Path -Parent $executable)
+    }
+}
+
 function Install-WingetPackage($Id, $Label) {
     if (!(Test-Command "winget")) {
         throw "winget is required to install $Label. Install App Installer from the Microsoft Store, then rerun this script."
@@ -97,7 +139,8 @@ function Ensure-Deps {
         Install-WingetPackage "Gyan.FFmpeg" "FFmpeg"
     }
     if (!(Test-Command "mpv")) {
-        Install-WingetPackage "shinchiro.mpv" "mpv"
+        Install-WingetPackage "9P3JFR0CLLL6" "mpv"
+        Ensure-CommandPath "mpv" "mpv.exe"
     }
 }
 
