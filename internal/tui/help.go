@@ -53,6 +53,7 @@ Podcasts and audio
 
 Reader and local AI
   enter on article    Render the article.
+  v                   Force the pretty Glamour render for the open article.
   ctrl+a              Ask the local model about the active article.
   ctrl+t              Extract critical points from the active article.
   ctrl+b, s           Scan the active item with Bouncer rules.

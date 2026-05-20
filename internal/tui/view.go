@@ -225,7 +225,7 @@ func (m Model) footer() string {
 	}
 	parts := []string{
 		m.styles.help.Render(truncate("[j/k] nav [enter] open [esc/left] back [a] add [r/R] refresh [ctrl+k] keys [q] quit", max(10, m.width))),
-		m.styles.status.Render(ai + aiKeys + " | " + bouncer + " [ctrl+b] | " + audioState + picked),
+		m.styles.status.Render(ai + aiKeys + " | [v] pretty | " + bouncer + " [ctrl+b] | " + audioState + picked),
 	}
 	if m.err != "" {
 		parts = append(parts, m.styles.error.Render(m.err))

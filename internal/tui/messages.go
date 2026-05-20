@@ -92,6 +92,7 @@ type readerMsg struct {
 	item     store.Item
 	raw      string
 	rendered string
+	forced   bool
 	err      error
 }
 

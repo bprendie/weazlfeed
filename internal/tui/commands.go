@@ -353,6 +353,20 @@ func renderReaderCmd(vault *store.Store, item store.Item, width int) tea.Cmd {
 	}
 }
 
+func renderPrettyReaderCmd(item store.Item, raw string, width int) tea.Cmd {
+	return func() tea.Msg {
+		text := strings.TrimSpace(raw)
+		if text == "" {
+			if item.ContentMarkdown != "" {
+				text = item.ContentMarkdown
+			} else {
+				text = item.Link
+			}
+		}
+		return readerMsg{item: item, raw: text, rendered: renderPrettyMarkdownText(text, width), forced: true}
+	}
+}
+
 func renderInterrogationCmd(out store.AIOutput, width int) tea.Cmd {
 	return func() tea.Msg {
 		text := interrogationBody(out)

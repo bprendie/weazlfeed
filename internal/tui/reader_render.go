@@ -30,6 +30,15 @@ func renderMarkdownText(text string, width int) string {
 	if shouldFastRender(text) {
 		return fastWrapMarkdown(text, width)
 	}
+	return renderPrettyMarkdownText(text, width)
+}
+
+func renderPrettyMarkdownText(text string, width int) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return ""
+	}
+	width = max(20, width)
 	renderer, err := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(width))
 	if err != nil {
 		return fastWrapMarkdown(text, width)

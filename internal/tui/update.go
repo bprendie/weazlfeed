@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"time"
 
 	"github.com/bprendie/weazlfeed/internal/audio"
@@ -184,7 +185,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.rawArticle = msg.raw
 			m.article = msg.rendered
 			m.stageScroll = 0
-			m.status = "reader ready"
+			if msg.forced {
+				m.status = "glamour view ready"
+			} else {
+				m.status = "reader ready"
+			}
 			for i := range m.items {
 				if m.items[i].ID == msg.item.ID {
 					m.items[i] = msg.item
@@ -289,6 +294,15 @@ func (m Model) updateKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, loadBouncerRulesCmd(m.store)
 	case "ctrl+d":
 		return m.startDeleteFeed()
+	case "v":
+		if m.focus == focusArticle && strings.TrimSpace(m.rawArticle) != "" {
+			item := store.Item{}
+			if len(m.items) > 0 && m.itemCursor >= 0 && m.itemCursor < len(m.items) {
+				item = m.items[m.itemCursor]
+			}
+			m.startRendering("forcing glamour view")
+			return m, tea.Batch(renderPrettyReaderCmd(item, m.rawArticle, m.readerWidth()), m.spinner.Tick)
+		}
 	case "j", "down":
 		m.move(1)
 	case "k", "up":
