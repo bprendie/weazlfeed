@@ -2,6 +2,7 @@ package audio
 
 import (
 	"errors"
+	"io"
 	"os/exec"
 	"strconv"
 	"sync"
@@ -10,6 +11,7 @@ import (
 
 type Player struct {
 	cmd        *exec.Cmd
+	stdin      io.WriteCloser
 	startedAt  time.Time
 	offset     int
 	pausedAt   time.Time
@@ -30,16 +32,22 @@ func (p *Player) Play(url string, offsetSeconds int) error {
 	}
 	p.Stop()
 	args := []string{"--no-video", "--really-quiet"}
+	args = append(args, "--input-terminal=no", "--input-file=-")
 	if offsetSeconds > 0 {
 		args = append(args, "--start="+strconv.Itoa(offsetSeconds))
 	}
 	args = append(args, url)
 	cmd := exec.Command(bin, args...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 	p.mu.Lock()
 	p.cmd = cmd
+	p.stdin = stdin
 	p.startedAt = time.Now()
 	p.offset = offsetSeconds
 	p.pausedAt = time.Time{}
@@ -51,6 +59,7 @@ func (p *Player) Play(url string, offsetSeconds int) error {
 		p.mu.Lock()
 		if p.cmd == cmd {
 			p.cmd = nil
+			p.stdin = nil
 		}
 		p.mu.Unlock()
 	}()
@@ -77,6 +86,7 @@ func (p *Player) Seek(deltaSeconds int) error {
 func (p *Player) TogglePause() error {
 	p.mu.Lock()
 	cmd := p.cmd
+	stdin := p.stdin
 	if !p.paused {
 		p.pausedAt = time.Now()
 		p.paused = true
@@ -85,12 +95,13 @@ func (p *Player) TogglePause() error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
-	return cmd.Process.Signal(execSignal("STOP"))
+	return writeCommand(stdin, "cycle pause\n")
 }
 
 func (p *Player) Resume() error {
 	p.mu.Lock()
 	cmd := p.cmd
+	stdin := p.stdin
 	if p.paused {
 		p.pausedTime += time.Since(p.pausedAt)
 		p.pausedAt = time.Time{}
@@ -100,15 +111,21 @@ func (p *Player) Resume() error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
-	return cmd.Process.Signal(execSignal("CONT"))
+	return writeCommand(stdin, "cycle pause\n")
 }
 
 func (p *Player) Stop() {
 	p.mu.Lock()
 	cmd := p.cmd
+	stdin := p.stdin
 	p.cmd = nil
+	p.stdin = nil
 	p.mu.Unlock()
 	if cmd != nil && cmd.Process != nil {
+		_ = writeCommand(stdin, "quit\n")
+		if stdin != nil {
+			_ = stdin.Close()
+		}
 		_ = cmd.Process.Kill()
 	}
 }
@@ -134,4 +151,12 @@ func (p *Player) Active() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.cmd != nil
+}
+
+func writeCommand(stdin io.Writer, command string) error {
+	if stdin == nil {
+		return errors.New("mpv control pipe is not available")
+	}
+	_, err := io.WriteString(stdin, command)
+	return err
 }
