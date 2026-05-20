@@ -2,7 +2,6 @@ package audio
 
 import (
 	"errors"
-	"io"
 	"os/exec"
 	"strconv"
 	"sync"
@@ -11,7 +10,7 @@ import (
 
 type Player struct {
 	cmd        *exec.Cmd
-	stdin      io.WriteCloser
+	control    mpvControl
 	startedAt  time.Time
 	offset     int
 	pausedAt   time.Time
@@ -31,23 +30,22 @@ func (p *Player) Play(url string, offsetSeconds int) error {
 		return errors.New("mpv not found")
 	}
 	p.Stop()
+	control := newMPVControl()
 	args := []string{"--no-video", "--really-quiet"}
-	args = append(args, "--input-terminal=no", "--input-file=-")
+	args = append(args, "--input-terminal=no")
+	args = append(args, control.args()...)
 	if offsetSeconds > 0 {
 		args = append(args, "--start="+strconv.Itoa(offsetSeconds))
 	}
 	args = append(args, url)
 	cmd := exec.Command(bin, args...)
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return err
-	}
 	if err := cmd.Start(); err != nil {
+		control.close()
 		return err
 	}
 	p.mu.Lock()
 	p.cmd = cmd
-	p.stdin = stdin
+	p.control = control
 	p.startedAt = time.Now()
 	p.offset = offsetSeconds
 	p.pausedAt = time.Time{}
@@ -56,10 +54,11 @@ func (p *Player) Play(url string, offsetSeconds int) error {
 	p.mu.Unlock()
 	go func() {
 		_ = cmd.Wait()
+		control.close()
 		p.mu.Lock()
 		if p.cmd == cmd {
 			p.cmd = nil
-			p.stdin = nil
+			p.control = nil
 		}
 		p.mu.Unlock()
 	}()
@@ -86,7 +85,7 @@ func (p *Player) Seek(deltaSeconds int) error {
 func (p *Player) TogglePause() error {
 	p.mu.Lock()
 	cmd := p.cmd
-	stdin := p.stdin
+	control := p.control
 	if !p.paused {
 		p.pausedAt = time.Now()
 		p.paused = true
@@ -95,13 +94,16 @@ func (p *Player) TogglePause() error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
-	return writeCommand(stdin, "cycle pause\n")
+	if control == nil {
+		return errors.New("mpv control pipe is not available")
+	}
+	return control.command(`{"command":["cycle","pause"]}` + "\n")
 }
 
 func (p *Player) Resume() error {
 	p.mu.Lock()
 	cmd := p.cmd
-	stdin := p.stdin
+	control := p.control
 	if p.paused {
 		p.pausedTime += time.Since(p.pausedAt)
 		p.pausedAt = time.Time{}
@@ -111,20 +113,22 @@ func (p *Player) Resume() error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
-	return writeCommand(stdin, "cycle pause\n")
+	if control == nil {
+		return errors.New("mpv control pipe is not available")
+	}
+	return control.command(`{"command":["cycle","pause"]}` + "\n")
 }
 
 func (p *Player) Stop() {
 	p.mu.Lock()
 	cmd := p.cmd
-	stdin := p.stdin
+	control := p.control
 	p.cmd = nil
-	p.stdin = nil
+	p.control = nil
 	p.mu.Unlock()
 	if cmd != nil && cmd.Process != nil {
-		_ = writeCommand(stdin, "quit\n")
-		if stdin != nil {
-			_ = stdin.Close()
+		if control != nil {
+			_ = control.command(`{"command":["quit"]}` + "\n")
 		}
 		_ = cmd.Process.Kill()
 	}
@@ -151,12 +155,4 @@ func (p *Player) Active() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return p.cmd != nil
-}
-
-func writeCommand(stdin io.Writer, command string) error {
-	if stdin == nil {
-		return errors.New("mpv control pipe is not available")
-	}
-	_, err := io.WriteString(stdin, command)
-	return err
 }
