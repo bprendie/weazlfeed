@@ -7,7 +7,10 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-const glamourMaxBytes = 24 * 1024
+const (
+	glamourMaxBytes = 8 * 1024
+	glamourMaxLines = 120
+)
 
 func (m Model) renderMarkdown(text string) string {
 	return renderMarkdownText(text, m.readerWidth())
@@ -24,7 +27,7 @@ func renderMarkdownText(text string, width int) string {
 		return ""
 	}
 	width = max(20, width)
-	if len(text) > glamourMaxBytes {
+	if shouldFastRender(text) {
 		return fastWrapMarkdown(text, width)
 	}
 	renderer, err := glamour.NewTermRenderer(glamour.WithAutoStyle(), glamour.WithWordWrap(width))
@@ -36,6 +39,16 @@ func renderMarkdownText(text string, width int) string {
 		return fastWrapMarkdown(text, width)
 	}
 	return strings.TrimRight(rendered, "\n")
+}
+
+func shouldFastRender(text string) bool {
+	if len(text) > glamourMaxBytes {
+		return true
+	}
+	if strings.Count(text, "\n") > glamourMaxLines {
+		return true
+	}
+	return false
 }
 
 func fastWrapMarkdown(text string, width int) string {
